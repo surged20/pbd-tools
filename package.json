@@ -1,0 +1,47 @@
+{
+  "name": "pbd-tools",
+  "version": "0.1.0",
+  "description": "Play by Discord Tools for Foundry VTT",
+  "main": "index.js",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run clean && vite build",
+    "build-old": "npm run && webpack --mode production",
+    "build:dev": "npm run && webpack",
+    "clean": "rm -rf dist/*",
+    "watch": "vite build --watch --mode development",
+    "hot": "vite serve",
+    "lint": "eslint ./src --ext .ts",
+    "lint:fix": "eslint ./src --ext .ts --fix"
+  },
+  "author": "Surge <surged20@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^10.0.0",
+    "luxon": "^1.27.0",
+    "turndown": "^7.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/jquery": "^3.5.30",
+    "@types/luxon": "^3.4.2",
+    "@types/node": "20.14.12",
+    "@types/tooltipster": "0.0.35",
+    "@typescript-eslint/eslint-plugin": "^4.20.0",
+    "@typescript-eslint/parser": "^4.20.0",
+    "eslint": "^7.28.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-import-resolver-typescript": "^2.4.0",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-prettier": "^3.4.0",
+    "pixi.js": "^7.4.2",
+    "prettier": "^3.3.3",
+    "sass": "^1.76.0",
+    "tinymce": "^5.8.1",
+    "vite": "^5.3.4",
+    "vite-plugin-checker": "^0.7.2",
+    "vite-plugin-static-copy": "^1.0.6",
+    "vite-tsconfig-paths": "^4.3.2"
+  }
+}

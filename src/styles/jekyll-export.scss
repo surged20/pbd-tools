@@ -1,0 +1,94 @@
+        .dashboard-container{
+            height: 100%;
+            width: 100%;
+            display:flex;
+        }
+
+        .howto-container{
+            max-width: 300px;
+        }
+
+        .howto-container li{
+            list-style: none;
+            margin-bottom: 0.5rem;
+        }
+
+        .mb-1 {
+            margin-bottom: 0.25rem;
+        }
+
+        .sheet-tabs{
+            min-width: 230px;
+        }
+
+	.grid {
+		display: grid;
+		width: 100%;
+		grid-gap: 10px;
+		background-image: url("https://www.nasa.gov/sites/default/files/styles/full_width/public/thumbnails/image/main_image_galaxies_stephans_quintet_sq_nircam_miri_final-1280.jpg");
+		#background-color: #2196F3;
+	padding: 10px;
+	border-radius: 10px;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	}
+
+	.heading {
+		#background-color: #80cbc4;
+	border: 1px solid #fff;
+	border-radius: 10px;
+	text-align: center;
+	padding: 15px 0;
+	font-size: 15px;
+	font-weight: bold;
+	color: #80f000;
+	}
+
+	.ship-label {
+		#background-color: #e0f000;
+	text-align: center;
+	padding: 0px 0;
+	font-size: 15px;
+	color: #80f000;
+	visibility: hidden;
+	}
+
+	.range-slot {
+		display: flex;
+		flex-direction: column;
+		#background-color: #e0f000;
+	border: 1px solid #fff;
+	border-radius: 10px;
+	text-align: center;
+	padding: 20px 0;
+	font-size: 20px
+	}
+
+	.ship-image {
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+		width: 80px;
+		height: 80px;
+		visibility: hidden;
+	}
+
+	.visible {
+		visibility: visible;
+	}
+
+	.hidden {
+		visibility: hidden;
+	}
+
+	.input-group {
+		display: flex;
+		flex-direction: row;
+	}
+
+	.mode {
+		display: flex;
+		flex-direction: row;
+	}
+
+
+
