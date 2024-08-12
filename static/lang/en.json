@@ -1,0 +1,231 @@
+{
+    "pbd-tools": {
+        "Channel": {
+            "IC": "IC",
+            "OOC": "OOC",
+            "GM": "GM"
+        },
+        "Export": {
+            "Complete": "exported to RPG Sage",
+            "Download": "RPG Sage Export - Download",
+            "Npcs": "Export NPCs",
+            "RpgSage": "RPG Sage",
+            "Server": "RPG Sage Export - Server"
+        },
+        "Setting": {
+            "UserMentionConfig": {
+                "Name": "Discord User Mentions",
+                "Label": "Configure Mentions",
+                "Hint": "Add Player Character to Discord User ID Mentions"
+            },
+            "DiscordWebhookSettings": {
+                "Name": "Discord Webhooks",
+                "Label": "Configure Webhooks",
+                "Hint": "Add Discord webhooks, names, and avatars"
+            },
+            "ExportSettings": {
+                "Name": "Exports",
+                "Label": "Configure Exports",
+                "Hint": "PC and NPC export settings"
+            },
+            "TrackerSettings": {
+                "Name": "Tracker",
+                "Label": "Configure Combat Tracker",
+                "Hint": "Configure appearance of the Discord combat tracker"
+            },
+            "DebugSettings": {
+                "Name": "Debug Options",
+                "Label": "Configure Debug",
+                "Hint": "Module development debug settings"
+            },
+            "GmUrl": {
+                "Name": "GM Channel URL",
+                "Hint": "Discord webhook URL for Gamemaster channel."
+            },
+            "GmUserName": {
+                "Name": "GM channel Discord name",
+                "Hint": "Name used for Gamemaster channel Discord posts"
+            },
+            "GmAvatar": {
+                "Name": "GM Discord avatar image",
+                "Hint": "Avatar image used for Gamemaster channel Discord posts"
+            },
+            "IcUrl": {
+                "Name": "IC Channel URL",
+                "Hint": "Discord webhook URL for in character channel."
+            },
+            "IcUserName": {
+                "Name": "IC Discord Name",
+                "Hint": "Name used for in character channel Discord posts"
+            },
+            "IcAvatar": {
+                "Name": "IC Discord avatar image",
+                "Hint": "Avatar image used for in character channel Discord posts"
+            },
+            "OocUrl": {
+                "Name": "OOC Channel URL",
+                "Hint": "Discord webhook URL for out of character channel."
+            },
+            "OocUserName": {
+                "Name": "OOC Discord Name",
+                "Hint": "Name used for out of character channel Discord posts"
+            },
+            "OocAvatar": {
+                "Name": "OOC Discord avatar image",
+                "Hint": "Avatar image used for out of character channel Discord posts"
+            },
+            "PcExportChannel": {
+                "Name": "PC Export Channel",
+                "Hint": "Discord channel that receives PC export posts"
+            },
+            "NpcExportServer": {
+                "Name": "Export NPC to Server",
+                "Hint": "NPC sheet RPG Sage export button sends TSV to server. If disabled, downloads TSV locally."
+            },
+            "PostNpcToDiscord": {
+                "Name": "Post NPC import notification to Discord",
+                "Hint": "Post message to Discord with the RPG Sage NPC import commands"
+            },
+            "PostPcToDiscord": {
+                "Name": "Post PC import notification to Discord",
+                "Hint": "Post message to Discord with the RPG Sage PC import commands"
+            },
+            "AbbrLength": {
+                "Name": "NPC Export Alias Length",
+                "Hint": "Sets length of generated NPC aliases in TSV exports"
+            },
+            "AbbrStrict": {
+                "Name": "NPC Export Alias Strict",
+                "Hint": "If disabled, overrides length to include all words in abbreviated alias"
+            },
+            "OverrideRemoteUrl": {
+                "Name": "Override Remote URL",
+                "Hint": "Debug use only. Overrides remotebase URL for testing and development."
+            },
+            "InhibitMovementNoGm": {
+                "Name": "Prevent movement if no GM is present",
+                "Hint": "Discord post region behavior pause feature only works when a GM account is connected."
+            },
+            "EnableDiscordTracker": {
+                "Name": "Enable Discord combat tracker",
+                "Hint": "Enable update button in combat tracker"
+            },
+            "TrackerBeginEnd": {
+                "Name": "Send update on encounter begin and end",
+                "Hint": "Enables begin/end encounter markers and sends initial tracker when encounter begins"
+            },
+            "TrackerOutputChannel": {
+                "Name": "Combat tracker output channel",
+                "Hint": "Discord channel to receive combat tracker updates"
+            },
+            "TrackerStatusHeader": {
+                "Name": "Turn Status Heading",
+                "Hint": "Text to display above the turn status column"
+            },
+            "TrackerStatusTurn": {
+                "Name": "Turn Status Marker",
+                "Hint": "Text to display when a combatant's turn is active"
+            },
+            "TrackerHeroPointsDisplay": {
+                "Name": "Display hero points",
+                "Hint": "Enable display of hero points"
+            },
+            "TrackerHeroPointsHeader": {
+                "Name": "Hero Point Heading",
+                "Hint": "Text to display above the hero point column"
+            },
+            "TrackerAcDisplay": {
+                "Name": "Display AC",
+                "Hint": "Disable or choose a display mode for the armor class column"
+            },
+            "TrackerAcHeader": {
+                "Name": "AC Heading",
+                "Hint": "Text to display above the armor class column"
+            },
+            "TrackerAliasDisplay": {
+                "Name": "Display aliases",
+                "Hint": "Enable display of aliases for exported NPCs"
+            },
+            "TrackerAliasHeader": {
+                "Name": "Alias Heading",
+                "Hint": "Text to display above the alias column"
+            },
+            "TrackerHpDisplay": {
+                "Name": "Display HP",
+                "Hint": "Disable or choose a display mode for the hit point column"
+            },
+            "TrackerHpHeader": {
+                "Name": "HP Heading",
+                "Hint": "Text to display above the hit point column"
+            },
+            "TrackerConditionsDisplay": {
+                "Name": "Display conditions/fffects",
+                "Hint": "Display a list of active conditions/effects present on each combatant"
+            },
+            "TrackerAcDisplayAlias": "Alias",
+            "TrackerAcDisplayNone": "None",
+            "TrackerAcDisplayValue": "Value",
+            "TrackerHpDisplayNone": "None",
+            "TrackerHpDisplayPc": "PC HP",
+            "TrackerHpDisplayPcFoe": "PC HP / opposition damage taken"
+        },
+        "UserMentionConfig": {
+            "Title": "Player Character to Discord User ID Mentions",
+            "Description": "Select a PC and associate it with a Discord User ID.",
+            "DescriptionUserID": "The Discord User ID may be obtained by <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5CRSRTWYCGPHZQ37H\">enabling developer mode</a> and then <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5H5D7JBY2QKKPVKNA\">copying the User ID</a>",
+            "PCLabel": "Player Character",
+            "SelectPC": "Select a PC",
+            "UserIDLabel": "Discord User ID",
+            "AddMapping": "Add PC to User ID Notification"
+        },
+        "WebhookSettings": {
+            "Title": "Configure Discord webhook URLs",
+            "Description": "Select or enter a channel label and associate with a Discord webhook URL",
+            "DescriptionUserID": "The Discord User ID may be obtained by <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5CRSRTWYCGPHZQ37H\">enabling developer mode</a> and then <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5H5D7JBY2QKKPVKNA\">copying the User ID</a>",
+            "PCLabel": "Channel",
+            "SelectPC": "Select or create a channel",
+            "UserIDLabel": "Discord Webhook URL",
+            "AddMapping": "Add channel to webhook URL mapping"
+        },
+        "ExportNpcsTrackerTooltip": "Export NPCs to RPG Sage",
+        "UpdateTrackerTooltip": "Update combat tracker on Discord",
+        "Channels": {
+            "InCharacter": "IC",
+            "OutOfCharacter": "OOC",
+            "GameMaster": "GM"
+        },
+        "BeginEncounter": "Begin Encounter",
+        "EndEncounter": "End Encounter"
+    },
+    "TYPES.RegionBehavior": {
+        "pbd-tools": {
+            "postDiscord": "Post to Discord"
+        }
+    },
+    "PostDiscordRegionBehaviorType": {
+        "FIELDS": {
+            "channel": {
+                "label": "Channel",
+                "hint": "Post will be sent to this channel on Discord.",
+                "choices": {
+                    "ic": "IC",
+                    "ooc": "OOC",
+                    "gm": "GM"
+                }
+            },
+            "content": {
+                "label": "Content",
+                "hint": "Message content to be posted to Discord."
+            },
+            "once": {
+                "label": "Once",
+                "hint": "Disable the behavior after the first time it's triggered."
+            },
+            "pause": {
+                "label": "Pause",
+                "hint": "Pause the game when the behavior is triggered. Requires GM to be connected."
+            }
+        },
+        "Paused": "Game paused for an event."
+    }
+}

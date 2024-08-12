@@ -1,0 +1,39 @@
+{
+    "id": "pbd-tools",
+    "name": "pbd-tools",
+    "title": "Play by Discord Tools",
+    "description": "Encounter and NPC tools for Play by Discord games",
+    "version": "0.0.0",
+    "authors": [
+      {
+        "name": "Surge",
+        "discord": "surged20",
+        "email": "surged20@gmail.com"
+      }
+    ],
+    "minimumCoreVersion": "12",
+    "compatibility": {
+      "minimum": "12",
+      "verified": "12.330"
+    },
+    "esmodules": ["./vendor.mjs", "./pbd-tools.mjs"],
+    "styles": ["./pbd-tools.css"],
+    "languages": [
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "lang/en.json"
+        }
+    ],
+    "documentTypes": {
+      "RegionBehavior": {
+        "postDiscord": {}
+      }
+    },
+    "persistentStorage": true,
+    "url": "https://github.com/surged20/pbd-tools",
+    "manifest": "https://github.com/surged20/pbd-tools/releases/latest/download/module.json",
+    "download": "https://github.com/surged20/pbd-tools/releases/download/0.0.0/module.zip",
+    "readme": "https://github.com/surged20/pbd-tools/blob/master/README.md",
+    "bugs": "https://github.com/surged20/pbd-tools/issues"
+}
