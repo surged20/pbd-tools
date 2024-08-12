@@ -1,0 +1,22 @@
+# IDE
+.idea/
+.vs/
+/.vscode
+
+# HMR
+/index.html
+/pbd-tools.mjs
+/vendor.mjs
+/pbd-tools.css
+/styles
+
+
+# Other
+/node_modules/
+/dist/*
+package/
+coverage
+foundryconfig.json
+tags*
+yarn.lock
+package-lock.json

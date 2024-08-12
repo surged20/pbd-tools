@@ -1,0 +1,39 @@
+<h2 style="flex: none" class="pbd-tools title">{{localize 'pbd-tools.UserMentionConfig.Title'}}</h2>
+<div style="display: flex; flex: unset;">
+    <span>
+        <p>{{localize 'pbd-tools.UserMentionConfig.Description'}}</p>
+        <p>{{{localize 'pbd-tools.UserMentionConfig.DescriptionUserID'}}}</p>
+    </span>
+</div>
+<form style="flex:none">
+    <div class="form-group">
+        <label style="text-align: center;" for="sceneId">{{localize 'pbd-tools.UserMentionConfig.PCLabel'}}</label>
+        <select name="actorId" id="actorId">
+            <option value="" disabled selected>{{localize 'pbd-tools.UserMentionConfig.SelectPC'}}</option>
+            {{#each pcs}}
+            <option value="{{this.id}}">{{this.name}}</option>
+            {{/each}}
+        </select>
+    </div>
+    <div class="form-group">
+        <label style="text-align: center;" for="userId">{{localize 'pbd-tools.UserMentionConfig.UserIDLabel'}}</label>
+        <input type="text" name="userId" id="userId">
+    </div>
+    <div style="display:flex; justify-content: center; align-items: center" class="add-pc">
+        <button style="width: 50%" class="btn btn-primary">{{localize 'pbd-tools.UserMentionConfig.AddMapping'}}</button>
+    </div>
+</form>
+<div style="flex: none" class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>{{localize 'pbd-tools.UserMentionConfig.PCLabel'}}</th>
+                <th>{{localize 'pbd-tools.UserMentionConfig.UserIDLabel'}}</th>
+                <th> </th>
+            </tr>
+        </thead>
+        <tbody id="config-rows">
+            <!-- Config rows will be added here -->
+        </tbody>
+    </table>
+</div>
