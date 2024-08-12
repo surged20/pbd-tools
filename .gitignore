@@ -1,0 +1,24 @@
+# IDE
+.idea/
+.vs/
+icons/\!dox/
+/.vscode
+
+/dist-example
+/node_modules/
+/dist/*
+!/dist/packs
+!/dist/icons
+foundryconfig.json
+package/
+yarn.lock
+coverage
+packs/temp-data
+static/packs/*
+!static/pack/Spells (SRD) - LICENSE
+foundryconfig.json
+tags*
+
+dist/
+
+docs/
