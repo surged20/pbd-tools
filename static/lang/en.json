@@ -1,0 +1,115 @@
+{
+    "pbd-tools": {
+        "Setting": {
+            "UserMentionConfig": {
+                "Name": "Discord User Mentions",
+                "Label": "Configure Mentions",
+                "Hint": "Add Player Character to Discord User ID Mentions"
+            },
+            "WebhookConfig": {
+                "Name": "Discord Webhooks",
+                "Label": "Configure Webhooks",
+                "Hint": "Add Discord Webhooks"
+            },
+            "GmUrl": {
+                "Name": "GM Channel URL",
+                "Hint": "Discord webhook URL for Gamemaster channel."
+            },
+            "GmUserName": {
+                "Name": "GM channel Discord name",
+                "Hint": "Name used for Gamemaster channel Discord posts"
+            },
+            "GmAvatar": {
+                "Name": "GM Discord avatar image",
+                "Hint": "Avatar image used for Gamemaster channel Discord posts"
+            },
+            "IcUrl": {
+                "Name": "IC Channel URL",
+                "Hint": "Discord webhook URL for in character channel."
+            },
+            "IcUserName": {
+                "Name": "IC Discord Name",
+                "Hint": "Name used for in character channel Discord posts"
+            },
+            "IcAvatar": {
+                "Name": "IC Discord avatar image",
+                "Hint": "Avatar image used for in character channel Discord posts"
+            },
+            "OocUrl": {
+                "Name": "OOC Channel URL",
+                "Hint": "Discord webhook URL for out of character channel."
+            },
+            "OocUserName": {
+                "Name": "OOC Discord Name",
+                "Hint": "Name used for out of character channel Discord posts"
+            },
+            "OocAvatar": {
+                "Name": "OOC Discord avatar image",
+                "Hint": "Avatar image used for out of character channel Discord posts"
+            },
+            "PcExportChannel" : {
+                "Name": "PC Export Channel",
+                "Hint": "Discord channel that receives PC export posts"
+            },
+            "OverrideRemoteUrl": {
+                "Name": "Override Remote URL",
+                "Hint": "Debug use only. Overrides remotebase URL for testing and development."
+            }
+        },
+        "UserMentionConfig": {
+            "Title": "Player Character to Discord User ID Mentions",
+            "Description": "Select a PC and associate it with a Discord User ID.",
+            "DescriptionUserID": "The Discord User ID may be obtained by <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5CRSRTWYCGPHZQ37H\">enabling developer mode</a> and then <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5H5D7JBY2QKKPVKNA\">copying the User ID</a>",
+            "PCLabel": "Player Character",
+            "SelectPC": "Select a PC",
+            "UserIDLabel": "Discord User ID",
+            "AddMapping": "Add PC to User ID Notification"
+        },
+        "WebhookConfig": {
+            "Title": "Configure Discord webhook URLs",
+            "Description": "Select or enter a channel label and associate with a Discord webhook URL",
+            "DescriptionUserID": "The Discord User ID may be obtained by <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5CRSRTWYCGPHZQ37H\">enabling developer mode</a> and then <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5H5D7JBY2QKKPVKNA\">copying the User ID</a>",
+            "PCLabel": "Channel",
+            "SelectPC": "Select or create a channel",
+            "UserIDLabel": "Discord Webhook URL",
+            "AddMapping": "Add channel to webhook URL mapping"
+        },
+        "UpdateTrackerTooltip": "Update combat tracker on Discord",
+        "Channels": {
+            "InCharacter": "IC",
+            "OutOfCharacter": "OOC",
+            "GameMaster": "GM"
+        }
+    },
+    "TYPES.RegionBehavior": {
+        "pbd-tools": {
+            "postDiscord": "Post to Discord"
+        }
+    },
+    "PostDiscordRegionBehaviorType": {
+        "FIELDS": {
+            "channel": {
+                "label": "Channel",
+                "hint": "Post will be sent to this channel on Discord.",
+                "choices": {
+                    "ic": "IC",
+                    "ooc": "OOC",
+                    "gm": "GM"
+                }
+            },
+            "content": {
+                "label": "Content",
+                "hint": "Message content to be posted to Discord."
+            },
+            "once": {
+                "label": "Once",
+                "hint": "Disable the behavior after the first time it's triggered."
+            },
+            "pause": {
+                "label": "Pause",
+                "hint": "Pause the game when the behavior is triggered."
+            }
+        },
+        "Paused": "Game paused for an event."
+    }
+}
