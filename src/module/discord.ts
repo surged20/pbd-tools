@@ -59,7 +59,7 @@ export async function postDiscord(
     channel: Channel | null,
     content: string,
 ): Promise<void> {
-    if (!channel) return;
+    if (channel === null) return;
     const username = getChannelUsername(channel);
     const avatarLink = await generateImageLink(getChannelAvatar(channel));
     const formData = createDiscordFormData(username, avatarLink, content, []);
