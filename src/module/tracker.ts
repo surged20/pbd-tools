@@ -39,6 +39,7 @@ export async function updateTracker(): Promise<void> {
     game.combat.turns.forEach((combatant: CombatantPF2e<EncounterPF2e>) => {
         const actor = combatant.actor;
         if (!actor) return;
+        if (combatant.hidden) return;
 
         // Stats
         const party = actor.alliance === "party" ? "+" : "-";
