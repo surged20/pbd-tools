@@ -8,9 +8,14 @@
         "Export": {
             "Complete": "exported to RPG Sage",
             "Download": "RPG Sage Export - Download",
+            "Influence": "Post Influence Statblock",
             "Npcs": "Export NPCs",
             "RpgSage": "RPG Sage",
             "Server": "RPG Sage Export - Server"
+        },
+        "Statblock": {
+            "SendInfluence": "Send Influence Statblock",
+            "SentInfluence": ": Influence statblock sent to Discord"
         },
         "Setting": {
             "UserMentionConfig": {
@@ -32,6 +37,11 @@
                 "Name": "Tracker",
                 "Label": "Configure Combat Tracker",
                 "Hint": "Configure appearance of the Discord combat tracker"
+            },
+            "StatblockSettings": {
+                "Name": "Statblocks",
+                "Label": "Configure Statblocks",
+                "Hint": "Configure appearance of the Discord statblocks"
             },
             "DebugSettings": {
                 "Name": "Debug Options",
@@ -109,6 +119,14 @@
             "EnableDiscordTracker": {
                 "Name": "Enable Discord combat tracker",
                 "Hint": "Enable update button in combat tracker"
+            },
+            "StatblockInfluenceColor": {
+                "Name": "Influence statblock color",
+                "Hint": "Color displayed in the influence statblock Discord post"
+            },
+            "StatblockInfluenceThumbnail": {
+                "Name": "Influence statblock thumbnail image",
+                "Hint": "Enables display of the NPC portrait in the influence statblock Discord post"
             },
             "TrackerBeginEnd": {
                 "Name": "Send update on encounter begin and end",

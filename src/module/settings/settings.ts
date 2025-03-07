@@ -2,6 +2,7 @@ import { MODULE_NAME } from "../constants.ts";
 import { DiscordWebhookSettings } from "./webhooks.ts";
 import { DebugSettings } from "./debug.ts";
 import { ExportSettings } from "./export.ts";
+import { StatblockSettings } from "./statblock.ts";
 import { TrackerSettings } from "./tracker.ts";
 import { UserMentionConfig } from "./user-mention-config.ts";
 
@@ -32,6 +33,8 @@ export function registerSettings(): void {
     UserMentionConfig.registerSettings();
 
     ExportSettings.registerSettingsAndCreateMenu("fas fa-file-export");
+
+    StatblockSettings.registerSettingsAndCreateMenu("fas fa-chart-bar");
 
     DebugSettings.registerSettingsAndCreateMenu("fas fa-debug");
 

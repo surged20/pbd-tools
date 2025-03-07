@@ -23,6 +23,11 @@ import {
     postDiscord,
 } from "./module/discord.ts";
 import { initContextMenu } from "./module/context-menu.ts";
+import {
+    getInfluencePage,
+    hasInfluence,
+    postInfluenceStatblock,
+} from "./module/influence.ts";
 
 Hooks.on("init", () => {
     registerSettings();
@@ -226,6 +231,19 @@ Hooks.on(
             callback: async (li) => actorEntryCallback(li, false),
             condition: (li) => {
                 return actorEntryCondition(li);
+            },
+        });
+        entryOptions.push({
+            name: `${MODULE_NAME}.Statblock.SendInfluence`,
+            icon: '<i class="fa-brands fa-discord"></i>',
+            callback: async (li) => {
+                const page = getInfluencePage(li);
+                if (page) postInfluenceStatblock(page);
+            },
+            condition: (li) => {
+                const page = getInfluencePage(li);
+                if (page === undefined) return false;
+                return hasInfluence(page);
             },
         });
     },
