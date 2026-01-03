@@ -68,6 +68,14 @@ export class ExportSettings extends SettingsMenuPbdTools {
                 type: Boolean,
                 default: true,
             },
+            "spoiler-stats": {
+                name: `${MODULE_NAME}.Setting.SpoilerStats.Name`,
+                hint: `${MODULE_NAME}.Setting.SpoilerStats.Hint`,
+                scope: "world",
+                config: true,
+                type: Boolean,
+                default: true,
+            },
         };
     }
 }

@@ -435,6 +435,13 @@ export function createPathbuilderJson(actor: CharacterPF2e): string {
 
     const details = actor.system.details;
     const attributes = actor.system.attributes;
+    const movement = (
+        actor.system as unknown as {
+            movement?: {
+                speeds?: { land?: { value?: number; totalModifier?: number } };
+            };
+        }
+    ).movement;
     const saves = actor.system.saves;
     const profs = actor.system.proficiencies;
     const skills = actor.system.skills;
@@ -462,8 +469,8 @@ export function createPathbuilderJson(actor: CharacterPF2e): string {
             classhp: attributes.classhp,
             bonushp: 0, // TODO
             bonushpPerLevel: 0, // TODO
-            speed: attributes.speed.value,
-            speedBonus: attributes.speed.totalModifier,
+            speed: movement?.speeds?.land?.value || 0,
+            speedBonus: movement?.speeds?.land?.totalModifier || 0,
         },
         abilities: {
             str: getAbilityScore(actor, "str"),

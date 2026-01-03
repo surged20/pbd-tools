@@ -25,19 +25,26 @@ import type { ApplicationV1HeaderButton } from "foundry-pf2e/foundry/client/appv
 declare const getTemplate: (path: string, id?: string) => Promise<unknown>;
 
 // Foundry classes available at runtime
-declare const JournalSheet: {
-    prototype: {
-        _getEntryContextOptions: () => ContextMenuEntry[];
+declare const foundry: {
+    appv1: {
+        sheets: {
+            JournalSheet: {
+                prototype: {
+                    _getEntryContextOptions: () => ContextMenuEntry[];
+                };
+            };
+        };
+    };
+    applications: {
+        instances: Map<unknown, unknown>;
     };
 };
 
 Hooks.on("init", () => {
-    console.log("[PBD-Tools] Module init hook called");
     // Register region behaviors FIRST, before any other initialization
     regionsInit();
 
     registerSettings();
-    console.log("[PBD-Tools] Init complete");
 
     const moduleData = game.modules.get(MODULE_NAME);
     if (moduleData) {
@@ -55,12 +62,9 @@ Hooks.on("init", () => {
 });
 
 Hooks.on("ready", () => {
-    console.log("[PBD-Tools] Ready hook called, user isGM:", game.user.isGM);
     if (!game.user.isGM) return;
 
     initContextMenu();
-
-    console.log("[PBD-Tools] Ready hook complete");
 });
 
 // Hook to store auto-generated aliases on actor creation (NPCs, Hazards, and PCs)
@@ -459,214 +463,217 @@ Hooks.on("ready", () => {
 
     // Store the original _getEntryContextOptions method
     const originalGetEntryContextOptions =
-        JournalSheet.prototype._getEntryContextOptions;
+        foundry.appv1.sheets.JournalSheet.prototype._getEntryContextOptions;
 
     // Extend the method to add our Discord options
-    JournalSheet.prototype._getEntryContextOptions = function () {
-        const options: ContextMenuEntry[] =
-            originalGetEntryContextOptions.call(this);
+    foundry.appv1.sheets.JournalSheet.prototype._getEntryContextOptions =
+        function () {
+            const options: ContextMenuEntry[] =
+                originalGetEntryContextOptions.call(this);
 
-        // Add Discord post options for each active channel
-        if (isChannelActive(Channel.IC)) {
-            options.push({
-                name: `${MODULE_NAME}.Discord.IC`,
-                icon: '<i class="fa-brands fa-discord"></i>',
-                callback: (li: HTMLElement) => {
-                    const pageId = li.dataset.pageId || li.dataset.entryId;
+            // Add Discord post options for each active channel
+            if (isChannelActive(Channel.IC)) {
+                options.push({
+                    name: `${MODULE_NAME}.Discord.IC`,
+                    icon: '<i class="fa-brands fa-discord"></i>',
+                    callback: (li: HTMLElement) => {
+                        const pageId = li.dataset.pageId || li.dataset.entryId;
 
-                    // Get the journal sheet instance to find the page
-                    const journalSheet = li.closest(
-                        ".journal-sheet",
-                    ) as HTMLElement;
-                    if (journalSheet?.dataset) {
-                        const appId = (
-                            journalSheet.dataset as DOMStringMap & {
-                                appid?: string;
-                            }
-                        ).appid;
-                        if (appId) {
-                            const app = (
-                                ui as {
-                                    windows: Record<
-                                        number,
-                                        | {
-                                              document?: {
-                                                  pages?: {
-                                                      find: (
-                                                          fn: (
-                                                              p: JournalEntryPage,
-                                                          ) => boolean,
-                                                      ) =>
-                                                          | JournalEntryPage
-                                                          | undefined;
-                                                  };
-                                              };
-                                          }
-                                        | undefined
-                                    >;
+                        // Get the journal sheet instance to find the page
+                        const journalSheet = li.closest(
+                            ".journal-sheet",
+                        ) as HTMLElement;
+                        if (journalSheet?.dataset) {
+                            const appId = (
+                                journalSheet.dataset as DOMStringMap & {
+                                    appid?: string;
                                 }
-                            ).windows[parseInt(appId)];
-                            if (app?.document?.pages && pageId) {
-                                const page = app.document.pages.find(
-                                    (p: JournalEntryPage) =>
-                                        p.id === pageId ||
-                                        String(p.sort) === pageId ||
-                                        p.name === pageId,
-                                );
-                                if (page) {
-                                    import("./module/discord.ts").then(
-                                        ({ postDiscordJournalPage }) => {
-                                            postDiscordJournalPage(
-                                                Channel.IC,
-                                                page,
-                                            );
-                                        },
+                            ).appid;
+                            if (appId) {
+                                const app = (
+                                    ui as {
+                                        windows: Record<
+                                            number,
+                                            | {
+                                                  document?: {
+                                                      pages?: {
+                                                          find: (
+                                                              fn: (
+                                                                  p: JournalEntryPage,
+                                                              ) => boolean,
+                                                          ) =>
+                                                              | JournalEntryPage
+                                                              | undefined;
+                                                      };
+                                                  };
+                                              }
+                                            | undefined
+                                        >;
+                                    }
+                                ).windows[parseInt(appId)];
+                                if (app?.document?.pages && pageId) {
+                                    const page = app.document.pages.find(
+                                        (p: JournalEntryPage) =>
+                                            p.id === pageId ||
+                                            String(p.sort) === pageId ||
+                                            p.name === pageId,
                                     );
+                                    if (page) {
+                                        import("./module/discord.ts").then(
+                                            ({ postDiscordJournalPage }) => {
+                                                postDiscordJournalPage(
+                                                    Channel.IC,
+                                                    page,
+                                                );
+                                            },
+                                        );
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                condition: () => true,
-            });
-        }
+                    },
+                    condition: () => true,
+                });
+            }
 
-        if (isChannelActive(Channel.OOC)) {
-            options.push({
-                name: `${MODULE_NAME}.Discord.OOC`,
-                icon: '<i class="fa-brands fa-discord"></i>',
-                callback: (li: HTMLElement) => {
-                    const pageId = li.dataset.pageId || li.dataset.entryId;
+            if (isChannelActive(Channel.OOC)) {
+                options.push({
+                    name: `${MODULE_NAME}.Discord.OOC`,
+                    icon: '<i class="fa-brands fa-discord"></i>',
+                    callback: (li: HTMLElement) => {
+                        const pageId = li.dataset.pageId || li.dataset.entryId;
 
-                    // Get the journal sheet instance to find the page
-                    const journalSheet = li.closest(
-                        ".journal-sheet",
-                    ) as HTMLElement;
-                    if (journalSheet?.dataset) {
-                        const appId = (
-                            journalSheet.dataset as DOMStringMap & {
-                                appid?: string;
-                            }
-                        ).appid;
-                        if (appId) {
-                            const app = (
-                                ui as {
-                                    windows: Record<
-                                        number,
-                                        | {
-                                              document?: {
-                                                  pages?: {
-                                                      find: (
-                                                          fn: (
-                                                              p: JournalEntryPage,
-                                                          ) => boolean,
-                                                      ) =>
-                                                          | JournalEntryPage
-                                                          | undefined;
-                                                  };
-                                              };
-                                          }
-                                        | undefined
-                                    >;
+                        // Get the journal sheet instance to find the page
+                        const journalSheet = li.closest(
+                            ".journal-sheet",
+                        ) as HTMLElement;
+                        if (journalSheet?.dataset) {
+                            const appId = (
+                                journalSheet.dataset as DOMStringMap & {
+                                    appid?: string;
                                 }
-                            ).windows[parseInt(appId)];
-                            if (app?.document?.pages && pageId) {
-                                const page = app.document.pages.find(
-                                    (p: JournalEntryPage) =>
-                                        p.id === pageId ||
-                                        String(p.sort) === pageId ||
-                                        p.name === pageId,
-                                );
-                                if (page) {
-                                    import("./module/discord.ts").then(
-                                        ({ postDiscordJournalPage }) => {
-                                            postDiscordJournalPage(
-                                                Channel.OOC,
-                                                page,
-                                            );
-                                        },
+                            ).appid;
+                            if (appId) {
+                                const app = (
+                                    ui as {
+                                        windows: Record<
+                                            number,
+                                            | {
+                                                  document?: {
+                                                      pages?: {
+                                                          find: (
+                                                              fn: (
+                                                                  p: JournalEntryPage,
+                                                              ) => boolean,
+                                                          ) =>
+                                                              | JournalEntryPage
+                                                              | undefined;
+                                                      };
+                                                  };
+                                              }
+                                            | undefined
+                                        >;
+                                    }
+                                ).windows[parseInt(appId)];
+                                if (app?.document?.pages && pageId) {
+                                    const page = app.document.pages.find(
+                                        (p: JournalEntryPage) =>
+                                            p.id === pageId ||
+                                            String(p.sort) === pageId ||
+                                            p.name === pageId,
                                     );
+                                    if (page) {
+                                        import("./module/discord.ts").then(
+                                            ({ postDiscordJournalPage }) => {
+                                                postDiscordJournalPage(
+                                                    Channel.OOC,
+                                                    page,
+                                                );
+                                            },
+                                        );
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                condition: () => true,
-            });
-        }
+                    },
+                    condition: () => true,
+                });
+            }
 
-        if (isChannelActive(Channel.GM)) {
-            options.push({
-                name: `${MODULE_NAME}.Discord.GM`,
-                icon: '<i class="fa-brands fa-discord"></i>',
-                callback: (li: HTMLElement) => {
-                    const pageId = li.dataset.pageId || li.dataset.entryId;
+            if (isChannelActive(Channel.GM)) {
+                options.push({
+                    name: `${MODULE_NAME}.Discord.GM`,
+                    icon: '<i class="fa-brands fa-discord"></i>',
+                    callback: (li: HTMLElement) => {
+                        const pageId = li.dataset.pageId || li.dataset.entryId;
 
-                    // Get the journal sheet instance to find the page
-                    const journalSheet = li.closest(
-                        ".journal-sheet",
-                    ) as HTMLElement;
-                    if (journalSheet?.dataset) {
-                        const appId = (
-                            journalSheet.dataset as DOMStringMap & {
-                                appid?: string;
-                            }
-                        ).appid;
-                        if (appId) {
-                            const app = (
-                                ui as {
-                                    windows: Record<
-                                        number,
-                                        | {
-                                              document?: {
-                                                  pages?: {
-                                                      find: (
-                                                          fn: (
-                                                              p: JournalEntryPage,
-                                                          ) => boolean,
-                                                      ) =>
-                                                          | JournalEntryPage
-                                                          | undefined;
-                                                  };
-                                              };
-                                          }
-                                        | undefined
-                                    >;
+                        // Get the journal sheet instance to find the page
+                        const journalSheet = li.closest(
+                            ".journal-sheet",
+                        ) as HTMLElement;
+                        if (journalSheet?.dataset) {
+                            const appId = (
+                                journalSheet.dataset as DOMStringMap & {
+                                    appid?: string;
                                 }
-                            ).windows[parseInt(appId)];
-                            if (app?.document?.pages && pageId) {
-                                const page = app.document.pages.find(
-                                    (p: JournalEntryPage) =>
-                                        p.id === pageId ||
-                                        String(p.sort) === pageId ||
-                                        p.name === pageId,
-                                );
-                                if (page) {
-                                    import("./module/discord.ts").then(
-                                        ({ postDiscordJournalPage }) => {
-                                            postDiscordJournalPage(
-                                                Channel.GM,
-                                                page,
-                                            );
-                                        },
+                            ).appid;
+                            if (appId) {
+                                const app = (
+                                    ui as {
+                                        windows: Record<
+                                            number,
+                                            | {
+                                                  document?: {
+                                                      pages?: {
+                                                          find: (
+                                                              fn: (
+                                                                  p: JournalEntryPage,
+                                                              ) => boolean,
+                                                          ) =>
+                                                              | JournalEntryPage
+                                                              | undefined;
+                                                      };
+                                                  };
+                                              }
+                                            | undefined
+                                        >;
+                                    }
+                                ).windows[parseInt(appId)];
+                                if (app?.document?.pages && pageId) {
+                                    const page = app.document.pages.find(
+                                        (p: JournalEntryPage) =>
+                                            p.id === pageId ||
+                                            String(p.sort) === pageId ||
+                                            p.name === pageId,
                                     );
+                                    if (page) {
+                                        import("./module/discord.ts").then(
+                                            ({ postDiscordJournalPage }) => {
+                                                postDiscordJournalPage(
+                                                    Channel.GM,
+                                                    page,
+                                                );
+                                            },
+                                        );
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                condition: () => true,
-            });
-        }
+                    },
+                    condition: () => true,
+                });
+            }
 
-        return options;
-    };
+            return options;
+        };
 });
 
 function rerenderApps(_path: string): void {
     const apps = [
         ...Object.values(ui.windows),
-        ...foundry.applications.instances.values(),
+        ...(foundry.applications.instances.values() as Iterable<{
+            render: () => void;
+        }>),
         ui.sidebar,
     ];
     for (const app of apps) {

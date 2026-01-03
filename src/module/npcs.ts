@@ -4,6 +4,7 @@ import type {
     EncounterPF2e,
     HazardPF2e,
     NPCPF2e,
+    NPCStrike,
 } from "foundry-pf2e";
 import abbreviate from "abbreviate";
 import { tsvFormat } from "d3-dsv";
@@ -12,14 +13,65 @@ import type { AbbreviateOptions } from "abbreviate";
 import { MODULE_NAME } from "./constants.ts";
 import { ActorAliasDialog, ActorAliasData } from "./actor-alias-dialog.ts";
 import { generateImageLink } from "./images.ts";
-import { isComplexHazard, isComplexHazardOrNpc } from "./helpers.ts";
+import {
+    isComplexHazard,
+    isComplexHazardOrNpc,
+    toSuperScript,
+} from "./helpers.ts";
 
 type SageNpcRecord = Record<string, number | string>;
+type NPCTraits = { name: string; label: string };
+type AdditionalEffect = { tag: string; label: string };
 
-function spoilers(value) {
+function getDescription(strike: NPCStrike, suffix?: string): string {
+    let content = "";
+
+    content += game.i18n.localize(strike.label);
+    content += suffix ? suffix : "";
+
+    if (strike.traits.length === 0) return content;
+
+    content += toSuperScript(" (");
+    strike.traits.forEach((t: NPCTraits, key: number, arr: NPCTraits[]) => {
+        if (t.name === "attack") return;
+        content += toSuperScript(t.label);
+        if (!Object.is(arr.length - 1, key)) {
+            content += toSuperScript(", ");
+        }
+    });
+    content += toSuperScript(")");
+
+    return content;
+}
+
+function getDamage(strike: NPCStrike, overrideDie?: string): string {
+    const bd = strike.item.baseDamage;
+    let content = "";
+
+    content += bd.dice + ((overrideDie ? overrideDie : bd.die) ?? "");
+    content += bd.modifier ? "+" + bd.modifier : "";
+    content += bd.damageType === "untyped" ? "" : " " + bd.damageType;
+
+    if (strike.additionalEffects.length > 0) {
+        content += " (";
+        strike.additionalEffects.forEach(
+            (e: AdditionalEffect, index: number, arr: AdditionalEffect[]) => {
+                content += game.i18n.localize(e.label);
+                if (!Object.is(arr.length - 1, index)) {
+                    content += ", ";
+                }
+            },
+        );
+        content += ")";
+    }
+
+    return content;
+}
+
+function spoilers(content: string | number): string {
     return game.settings.get(MODULE_NAME, "spoiler-stats")
-        ? `||${value}||`
-        : value;
+        ? "||" + content + "||"
+        : String(content);
 }
 
 function getAbilities(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
@@ -44,9 +96,7 @@ function getSaves(
 }
 
 function getSkills(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
-    let skills = "";
-    const lores = actor.itemTypes.lore || [];
-    const skillList = [
+    const skills = [
         "acrobatics",
         "arcana",
         "athletics",
@@ -65,53 +115,67 @@ function getSkills(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
         "thievery",
     ];
 
-    for (const lore of lores) {
-        const skill = lore.name.toLowerCase().replace(" lore", "");
-        const mod = lore.system.mod.value;
-        const loreString = `**${skill}** +${mod}`;
-        skills += skills === "" ? loreString : "; " + loreString;
-    }
-
-    for (const skill of skillList) {
-        const mod = actor.system.skills[skill]?.value || 0;
-        if (mod > 0) {
-            const skillString = `**${skill}** ${mod > 0 ? "+" : ""}${mod}`;
-            skills += skills === "" ? skillString : "; " + skillString;
-        }
-    }
-
-    record["skills"] = spoilers(skills);
+    skills.forEach((s) => {
+        const mod = actor.skills[s].mod;
+        record[s] = mod;
+        record["dc." + s] = spoilers(10 + mod);
+    });
 
     return record;
 }
 
-function getStrikes(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
-    let attacks = "";
-    const strikes = [...(actor.itemTypes.melee || [])];
-    for (const strike of strikes) {
-        if (!strike?.system) continue;
-        const name = strike.name;
-        const bonus = spoilers(strike.system.bonus.value);
-        const traits = strike.system.traits.value;
-        let traitsString = "";
-        if (traits.length > 0) {
-            traitsString = " (" + traits.join(", ") + ")";
-        }
-        const damage = spoilers(strike.system.damageRolls);
-        let dmgString = "";
-        for (const key of Object.keys(damage)) {
-            const dmg = damage[key];
-            const dmgBonus = dmg.damage;
-            const dmgType = dmg.damageType || "";
-            const dmgCritical = dmg.critical || "";
-            const critString = dmgCritical !== "" ? " plus " + dmgCritical : "";
-            dmgString += `${dmgBonus} ${dmgType}${critString}`;
-        }
-        const attackString = `**${name}** ${bonus}${traitsString} **Damage** ${dmgString}`;
-
-        attacks += attacks === "" ? attackString : "; " + attackString;
+function getStrikeStats(
+    s: NPCStrike,
+    index: number,
+    record: SageNpcRecord,
+): SageNpcRecord {
+    const type = s.item.isMelee ? "melee" : "ranged";
+    if (index === 0) {
+        record[type + ".default"] = s.totalModifier;
+        record[type + ".default.desc"] = getDescription(s);
+        record[type + ".default.damage"] = getDamage(s);
     }
-    record["attacks"] = attacks;
+    record[type + "." + s.slug] = s.totalModifier;
+    record[type + "." + s.slug + ".desc"] = getDescription(s);
+    record[type + "." + s.slug + ".damage"] = getDamage(s);
+
+    const twoHandTraits: Record<string, string> = {
+        "two-hand-d6": "d6",
+        "two-hand-d8": "d8",
+        "two-hand-d10": "d10",
+        "two-hand-d12": "d12",
+    };
+    const twoHandTrait = Object.keys(twoHandTraits).find((e) =>
+        s.traits.map((t) => t.name).includes(e),
+    );
+    // If the strike has a two-hand trait, add a second entry for the two-hand damage
+    if (twoHandTrait) {
+        record[type + "." + s.slug + "2h"] = s.totalModifier;
+        record[type + "." + s.slug + "2h.desc"] = getDescription(
+            s,
+            " (Two Hand)",
+        );
+        record[type + "." + s.slug + "2h.damage"] = getDamage(
+            s,
+            twoHandTraits[twoHandTrait],
+        );
+    }
+    return record;
+}
+
+function getStrikes(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
+    if (!actor) return record;
+
+    const strikes =
+        actor?.system?.actions?.filter((a) => a.type === "strike") ?? [];
+
+    strikes
+        .filter((s) => s.item.isMelee)
+        .forEach((s, index) => (record = getStrikeStats(s, index, record)));
+    strikes
+        .filter((s) => !s.item.isMelee)
+        .forEach((s, index) => (record = getStrikeStats(s, index, record)));
+
     return record;
 }
 

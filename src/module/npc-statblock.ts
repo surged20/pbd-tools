@@ -83,17 +83,25 @@ function extractStatblockData(actor: NPCPF2e): StatblockData {
         will: system.saves.will.value,
     };
 
-    // Speeds
+    // Speeds - use new v13 movement.speeds path
     const speeds: Record<string, number> = {};
-    if (system.attributes.speed.value)
-        speeds.land = system.attributes.speed.value;
-    Object.entries(system.attributes.speed.otherSpeeds || {}).forEach(
-        ([key, speed]) => {
-            if (speed && typeof speed === "object" && "value" in speed) {
-                speeds[key] = speed.value as number;
+    const movementSpeeds =
+        (
+            system as unknown as {
+                movement?: { speeds?: Record<string, { value?: number }> };
             }
-        },
-    );
+        ).movement?.speeds || {};
+    if (movementSpeeds.land?.value) speeds.land = movementSpeeds.land.value;
+    Object.entries(movementSpeeds).forEach(([key, speed]) => {
+        if (
+            key !== "land" &&
+            speed &&
+            typeof speed === "object" &&
+            "value" in speed
+        ) {
+            speeds[key] = speed.value as number;
+        }
+    });
 
     // Recall Knowledge - extract from system identification data
     const recalls = extractRecallKnowledge(actor);

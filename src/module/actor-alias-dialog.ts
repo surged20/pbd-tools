@@ -59,6 +59,7 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
     actors: ActorAliasData[];
     onConfirm: (actors: ActorAliasData[]) => void;
     onCancel?: () => void;
+    #wasConfirmed = false;
 
     constructor(options: ActorAliasDialogOptions) {
         super({
@@ -174,13 +175,26 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
                     border: 1px solid var(--color-border-light-primary);
                     border-radius: 3px;
                 }
+                .pbd-tools-alias-dialog .form-footer {
+                    display: flex;
+                    flex-direction: row;
+                    gap: 8px;
+                    padding: 10px;
+                    justify-content: flex-start;
+                }
+                .pbd-tools-alias-dialog .form-footer button {
+                    flex: 0 0 auto;
+                }
             `;
             document.head.appendChild(style);
         }
     }
 
     _onClose(_options: unknown): void {
-        this.onCancel?.();
+        // Only call onCancel if the dialog wasn't confirmed (i.e., user cancelled)
+        if (!this.#wasConfirmed) {
+            this.onCancel?.();
+        }
         return super._onClose(_options);
     }
 
@@ -202,6 +216,7 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
 
     #handleExport(): void {
         const updatedNpcs = this.#extractFormData();
+        this.#wasConfirmed = true;
         this.onConfirm(updatedNpcs);
         this.close();
     }

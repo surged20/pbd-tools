@@ -109,6 +109,10 @@
                 "Name": "NPC Export Alias Strict",
                 "Hint": "If disabled, overrides length to include all words in abbreviated alias"
             },
+            "SpoilerStats": {
+                "Name": "Wrap NPC stats in spoiler tags",
+                "Hint": "When enabled, NPC stat values in TSV exports are wrapped in Discord spoiler tags (||value||)"
+            },
             "OverrideRemoteUrl": {
                 "Name": "Override Remote URL",
                 "Hint": "Debug use only. Overrides remotebase URL for testing and development."

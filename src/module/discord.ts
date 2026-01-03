@@ -162,21 +162,6 @@ export async function postDiscordJournal(
     channel: Channel,
     sheet: JournalSheetLike,
 ): Promise<void> {
-    console.log("[PBD-Tools] postDiscordJournal called with sheet:", {
-        sheet,
-        sheetType: typeof sheet,
-        hasPageIndex: "pageIndex" in sheet,
-        pageIndex: sheet.pageIndex,
-        hasDocument: !!sheet.document,
-        documentKeys: sheet.document
-            ? Object.keys(sheet.document)
-            : "no document",
-        hasPages: !!sheet.document?.pages,
-        pagesType: typeof sheet.document?.pages,
-        hasContents: !!sheet.document?.pages?.contents,
-        contentsLength: sheet.document?.pages?.contents?.length,
-    });
-
     let page: JournalEntryPage | null = null;
 
     try {
@@ -197,13 +182,6 @@ export async function postDiscordJournal(
             // Try to get from the sheet's object property
             page = sheet.object as JournalEntryPage;
         }
-
-        console.log("[PBD-Tools] Selected page:", {
-            page,
-            pageType: typeof page,
-            pageId: page?.id,
-            pageName: page?.name,
-        });
 
         if (!page) {
             console.error("[PBD-Tools] Could not find page to export");

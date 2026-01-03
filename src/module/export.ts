@@ -99,27 +99,19 @@ async function exportNpcTsv(
         type: fileType,
     });
     if (server) {
-        console.log("[PBD-Tools] Server export, uploading TSV file");
         if (await uploadTsvFile(tsvFile)) {
             const message = createNpcMessage(name, fileName);
-            console.log(
-                "[PBD-Tools] TSV upload successful, posting chat message",
-            );
             await postNpcChatMessage(message);
 
             const postToDiscord = game.settings.get(
                 MODULE_NAME,
                 "post-npc-to-discord",
             );
-            console.log("[PBD-Tools] Discord posting setting:", postToDiscord);
 
             if (postToDiscord) {
-                console.log("[PBD-Tools] Posting NPC to Discord");
                 await postNpcDiscordMessage(
                     removeBlankLines(convertToMarkdown(message)),
                 );
-            } else {
-                console.log("[PBD-Tools] Discord posting disabled in settings");
             }
         } else {
             ui.notifications.error(
