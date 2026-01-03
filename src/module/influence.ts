@@ -1,4 +1,4 @@
-import { ActorPF2e, Size } from "foundry-pf2e";
+import type { ActorPF2e, Size } from "foundry-pf2e";
 
 import { Channel, DiscordEmbed, MODULE_NAME } from "./constants.ts";
 import { createDiscordFormData, postDiscordMessage } from "./discord.ts";
@@ -9,6 +9,7 @@ import {
     isChannelActive,
 } from "./helpers.ts";
 import { generateImageLink } from "./images.ts";
+import { validateDiscordMessage, handleValidationResult } from "./discord-validation.ts";
 
 interface NPCDataEntry {
     revealed: boolean;
@@ -65,7 +66,9 @@ export function getInfluencePage(
     const actor = game.actors.get(li.data("documentId")) as ActorPF2e;
     if (!actor?.isOfType("npc")) return undefined;
     const btj = game.journal.get(
-        game.settings.get("pf2e-bestiary-tracking", "bestiary-tracking"),
+        String(
+            game.settings.get("pf2e-bestiary-tracking", "bestiary-tracking"),
+        ),
     );
     if (!btj) return undefined;
     return btj.pages.find((p) => p.name === actor.name);
@@ -222,12 +225,24 @@ export async function postInfluenceStatblock(
 ): Promise<void> {
     if (!isChannelActive(Channel.GM)) return;
 
-    const embed = await createInfluenceStatblock(page);
-    const username = getChannelUsername(Channel.GM);
-    const avatarLink = await generateImageLink(getChannelAvatar(Channel.GM));
-    const formData = createDiscordFormData(username, avatarLink, "", [embed]);
-    await postDiscordMessage(Channel.GM, formData);
-    ui.notifications.info(
-        page.name + game.i18n.localize("pbd-tools.Statblock.SentInfluence"),
-    );
+    try {
+        const embed = await createInfluenceStatblock(page);
+
+        // Pre-validate embed size before attempting to send
+        const validationResult = validateDiscordMessage("", [embed]);
+        if (!handleValidationResult(validationResult, `influence statblock for ${page.name}`)) {
+            return;
+        }
+
+        const username = getChannelUsername(Channel.GM);
+        const avatarLink = await generateImageLink(getChannelAvatar(Channel.GM));
+        const formData = createDiscordFormData(username, avatarLink, "", [embed]);
+        await postDiscordMessage(Channel.GM, formData);
+        ui.notifications.info(
+            page.name + game.i18n.localize("pbd-tools.Statblock.SentInfluence"),
+        );
+    } catch (error) {
+        console.error("Failed to send influence statblock:", error);
+        ui.notifications.error("Failed to send influence statblock to Discord");
+    }
 }
