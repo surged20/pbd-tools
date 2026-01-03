@@ -15,6 +15,7 @@
         },
         "Statblock": {
             "SendInfluence": "Send Influence Statblock",
+            "SendNPC": "Send NPC Statblock",
             "SentInfluence": ": Influence statblock sent to Discord"
         },
         "Setting": {
@@ -211,6 +212,11 @@
             "InCharacter": "IC",
             "OutOfCharacter": "OOC",
             "GameMaster": "GM"
+        },
+        "Discord": {
+            "IC": "Share to Discord IC",
+            "OOC": "Share to Discord OOC",
+            "GM": "Share to Discord GM"
         },
         "BeginEncounter": "Begin Encounter",
         "EndEncounter": "End Encounter"
