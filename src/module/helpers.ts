@@ -1,7 +1,7 @@
 import TurndownService from "turndown";
 
 import { MODULE_NAME, Channel, Channels } from "./constants.ts";
-import { ActorPF2e } from "foundry-pf2e";
+import type { ActorPF2e } from "foundry-pf2e";
 
 const SUPERSCRIPTS = {
     " ": " ",
@@ -72,6 +72,12 @@ export function convertToMarkdown(html: string): string {
         },
     });
     return turndownService.turndown(html);
+}
+
+// Async version that resolves UUIDs - import from uuid-resolver to avoid circular imports
+export async function convertToMarkdownAsync(html: string): Promise<string> {
+    const { convertToMarkdownWithUUIDs } = await import('./uuid-resolver.ts');
+    return convertToMarkdownWithUUIDs(html);
 }
 
 export function isComplexHazard(actor: ActorPF2e): boolean {
