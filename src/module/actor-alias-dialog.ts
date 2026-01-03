@@ -1,13 +1,24 @@
 // Actor Alias Dialog using ApplicationV2 framework for editing actor aliases before export
 
+import type { ActorPF2e } from "foundry-pf2e";
+
 // Runtime globals available in Foundry
-declare const foundry: any;
+declare const foundry: {
+    applications: {
+        api: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ApplicationV2: any;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            HandlebarsApplicationMixin: <T>(base: T) => any;
+        };
+    };
+};
 
 export interface ActorAliasData {
     name: string;
     originalAlias: string;
     editedAlias?: string;
-    actor: any; // ActorPF2e
+    actor: ActorPF2e;
 }
 
 interface ActorAliasDialogOptions {
@@ -17,7 +28,9 @@ interface ActorAliasDialogOptions {
     onCancel?: () => void;
 }
 
-export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplicationMixin(foundry.applications.api.ApplicationV2) {
+export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplicationMixin(
+    foundry.applications.api.ApplicationV2,
+) {
     static DEFAULT_OPTIONS = {
         id: "actor-alias-dialog-{id}",
         classes: ["dialog", "pbd-tools-alias-dialog"],
@@ -26,16 +39,21 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
             title: "Edit Actor Aliases",
             icon: "fas fa-edit",
             minimizable: false,
-            resizable: true
+            resizable: true,
         },
         position: {
             width: 600,
-            height: "auto"
+            height: "auto",
         },
-        actions: {
-            export: ActorAliasDialog.#onExport,
-            cancel: ActorAliasDialog.#onCancel
-        }
+    };
+
+    static PARTS = {
+        form: {
+            template: "modules/pbd-tools/templates/actor-alias-dialog.hbs",
+        },
+        footer: {
+            template: "templates/generic/form-footer.hbs",
+        },
     };
 
     actors: ActorAliasData[];
@@ -45,21 +63,49 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
     constructor(options: ActorAliasDialogOptions) {
         super({
             window: {
-                title: options.title
-            }
+                title: options.title,
+            },
         });
         this.actors = options.actors;
         this.onConfirm = options.onConfirm;
         this.onCancel = options.onCancel;
     }
 
-    async _prepareContext(_options: any) {
+    async _prepareContext(
+        _options: unknown,
+    ): Promise<{ actors: ActorAliasData[] }> {
         return {
-            actors: this.actors
+            actors: this.actors,
         };
     }
 
-    _onRender(_context: any, _options: any) {
+    async _preparePartContext(
+        partId: string,
+        context: { actors: ActorAliasData[] },
+    ): Promise<unknown> {
+        if (partId === "footer") {
+            return {
+                ...context,
+                buttons: [
+                    {
+                        type: "button",
+                        icon: "fas fa-file-export",
+                        label: "Export",
+                        action: "export",
+                    },
+                    {
+                        type: "button",
+                        icon: "fas fa-times",
+                        label: "Cancel",
+                        action: "cancel",
+                    },
+                ],
+            };
+        }
+        return context;
+    }
+
+    _onRender(_context: unknown, _options: unknown): void {
         super._onRender(_context, _options);
 
         // Inject styles
@@ -72,7 +118,7 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
         }
     }
 
-    #injectStyles() {
+    #injectStyles(): void {
         const styleId = "pbd-alias-dialog-styles";
         if (!document.getElementById(styleId)) {
             const style = document.createElement("style");
@@ -133,33 +179,28 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
         }
     }
 
-    _onClose(_options: any) {
+    _onClose(_options: unknown): void {
         this.onCancel?.();
         return super._onClose(_options);
     }
 
-    static async #onExport(event: Event, target: HTMLElement) {
-        const dialog = (target.closest(".application") as any)?.app;
-        if (dialog) {
+    _onClickAction(event: PointerEvent, target: HTMLElement): void {
+        const action = target.dataset.action;
+        if (action === "export") {
             event.preventDefault();
-            dialog.#handleExport();
+            this.#handleExport();
+        } else if (action === "cancel") {
+            event.preventDefault();
+            this.close();
         }
     }
 
-    static async #onCancel(event: Event, target: HTMLElement) {
-        const dialog = (target.closest(".application") as any)?.app;
-        if (dialog) {
-            event.preventDefault();
-            dialog.close();
-        }
-    }
-
-    #onSubmit(event: Event) {
+    #onSubmit(event: Event): void {
         event.preventDefault();
         this.#handleExport();
     }
 
-    #handleExport() {
+    #handleExport(): void {
         const updatedNpcs = this.#extractFormData();
         this.onConfirm(updatedNpcs);
         this.close();
@@ -170,28 +211,24 @@ export class ActorAliasDialog extends foundry.applications.api.HandlebarsApplica
         if (!form) return this.actors;
 
         return this.actors.map((actor, index) => {
-            const input = form.querySelector(`input[name="alias-${index}"]`) as HTMLInputElement;
+            const input = form.querySelector(
+                `input[name="alias-${index}"]`,
+            ) as HTMLInputElement;
             const editedAlias = input?.value || actor.originalAlias;
 
             return {
                 ...actor,
-                editedAlias: editedAlias !== actor.originalAlias ? editedAlias : undefined,
+                editedAlias:
+                    editedAlias !== actor.originalAlias
+                        ? editedAlias
+                        : undefined,
             };
         });
     }
 
-    static PARTS = {
-        form: {
-            template: "modules/pbd-tools/templates/actor-alias-dialog.hbs"
-        },
-        footer: {
-            template: "templates/generic/form-footer.hbs"
-        }
-    };
-
-
-
-    static async showDialog(options: ActorAliasDialogOptions): Promise<ActorAliasData[]> {
+    static async showDialog(
+        options: ActorAliasDialogOptions,
+    ): Promise<ActorAliasData[]> {
         return new Promise((resolve, reject) => {
             const dialog = new ActorAliasDialog({
                 ...options,

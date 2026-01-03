@@ -6,7 +6,7 @@ import type {
 } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 
 // Runtime globals available in Foundry
-// @ts-ignore - FormApplication is available globally in Foundry
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const FormApplication: any;
 import type { AppV1RenderOptions } from "foundry-pf2e/foundry/client/appv1/api/application-v1.mjs";
 
@@ -20,7 +20,7 @@ interface UserMentionConfigFormData extends FormData {
     userId: string;
 }
 
-// @ts-ignore - Extending from runtime global FormApplication
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class UserMentionConfig extends FormApplication {
     static get defaultOptions(): FormApplicationOptions {
         return foundry.utils.mergeObject(super.defaultOptions, {

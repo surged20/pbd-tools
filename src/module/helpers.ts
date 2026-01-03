@@ -76,7 +76,7 @@ export function convertToMarkdown(html: string): string {
 
 // Async version that resolves UUIDs - import from uuid-resolver to avoid circular imports
 export async function convertToMarkdownAsync(html: string): Promise<string> {
-    const { convertToMarkdownWithUUIDs } = await import('./uuid-resolver.ts');
+    const { convertToMarkdownWithUUIDs } = await import("./uuid-resolver.ts");
     return convertToMarkdownWithUUIDs(html);
 }
 

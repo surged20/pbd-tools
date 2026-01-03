@@ -7,10 +7,19 @@ import {
     getChannelAvatar,
     isChannelActive,
 } from "./helpers.ts";
-import { validateDiscordMessage, handleValidationResult } from "./discord-validation.ts";
-// Runtime globals available in Foundry
-declare const ImagePopout: any;
-declare const JournalSheet: any;
+import {
+    validateDiscordMessage,
+    handleValidationResult,
+} from "./discord-validation.ts";
+
+interface ImagePopoutLike {
+    options?: { src?: string };
+    image?: string;
+    src?: string;
+    document?: { src?: string };
+    data?: { src?: string };
+    object?: { src?: string };
+}
 
 export function createDiscordFormData(
     username: string,
@@ -38,20 +47,23 @@ export async function postDiscordMessage(
     formData: FormData,
 ): Promise<void> {
     // Extract the payload for validation
-    const payloadString = formData.get('payload_json') as string;
+    const payloadString = formData.get("payload_json") as string;
     if (payloadString) {
         try {
             const payload = JSON.parse(payloadString);
-            const content = payload.content || '';
+            const content = payload.content || "";
             const embeds = payload.embeds || [];
 
             // Validate message before sending
             const validationResult = validateDiscordMessage(content, embeds);
-            if (!handleValidationResult(validationResult, 'Discord message')) {
+            if (!handleValidationResult(validationResult, "Discord message")) {
                 return; // Exit if validation fails
             }
         } catch (parseError) {
-            console.warn('[PBD-Tools] Could not parse Discord payload for validation:', parseError);
+            console.warn(
+                "[PBD-Tools] Could not parse Discord payload for validation:",
+                parseError,
+            );
             // Continue with sending anyway, as this might be a different payload format
         }
     }
@@ -80,7 +92,7 @@ export async function postDiscord(
 
     // Pre-validate content length before creating FormData
     const validationResult = validateDiscordMessage(content, []);
-    if (!handleValidationResult(validationResult, 'Discord message')) {
+    if (!handleValidationResult(validationResult, "Discord message")) {
         return; // Exit if validation fails
     }
 
@@ -92,7 +104,7 @@ export async function postDiscord(
 
 export async function postDiscordImage(
     channel: Channel,
-    popout: any,
+    popout: ImagePopoutLike,
 ): Promise<void> {
     const formData: FormData = new FormData();
 
@@ -100,18 +112,18 @@ export async function postDiscordImage(
     let imageUrl: string = "";
 
     // Extract image URL from v13 ImagePopout structure
-    if ((popout as any).options?.src) {
-        imageUrl = (popout as any).options.src;
-    } else if ((popout as any).image) {
-        imageUrl = (popout as any).image;
-    } else if ((popout as any).src) {
-        imageUrl = (popout as any).src;
-    } else if ((popout as any).document?.src) {
-        imageUrl = (popout as any).document.src;
-    } else if ((popout as any).data?.src) {
-        imageUrl = (popout as any).data.src;
-    } else if ((popout as any).object?.src) {
-        imageUrl = (popout as any).object.src;
+    if (popout.options?.src) {
+        imageUrl = popout.options.src;
+    } else if (popout.image) {
+        imageUrl = popout.image;
+    } else if (popout.src) {
+        imageUrl = popout.src;
+    } else if (popout.document?.src) {
+        imageUrl = popout.document.src;
+    } else if (popout.data?.src) {
+        imageUrl = popout.data.src;
+    } else if (popout.object?.src) {
+        imageUrl = popout.object.src;
     }
 
     if (!imageUrl) {
@@ -136,9 +148,19 @@ export async function postDiscordImage(
     );
 }
 
+interface JournalSheetLike {
+    pageIndex?: number;
+    document?: {
+        pages?: {
+            contents?: ({ sort: number } & JournalEntryPage)[];
+        };
+    };
+    object?: JournalEntryPage;
+}
+
 export async function postDiscordJournal(
     channel: Channel,
-    sheet: any,
+    sheet: JournalSheetLike,
 ): Promise<void> {
     console.log("[PBD-Tools] postDiscordJournal called with sheet:", {
         sheet,
@@ -165,7 +187,10 @@ export async function postDiscordJournal(
                 (a, b) => a.sort - b.sort,
             );
             page = sortedPages[pageIndex] as JournalEntryPage;
-        } else if (sheet.document?.pages?.contents?.length > 0) {
+        } else if (
+            sheet.document?.pages?.contents &&
+            sheet.document.pages.contents.length > 0
+        ) {
             // Fallback to first page if pageIndex is not available
             page = sheet.document.pages.contents[0] as JournalEntryPage;
         } else if (sheet.object) {
@@ -233,12 +258,12 @@ export async function postDiscordJournalSelection(
     selection: string,
 ): Promise<void> {
     // Use the async version that resolves UUIDs
-    const { convertToMarkdownAsync } = await import('./helpers.ts');
+    const { convertToMarkdownAsync } = await import("./helpers.ts");
     const content = await convertToMarkdownAsync(selection);
 
     // Pre-validate content length before creating FormData
     const validationResult = validateDiscordMessage(content, []);
-    if (!handleValidationResult(validationResult, 'journal selection')) {
+    if (!handleValidationResult(validationResult, "journal selection")) {
         return; // Exit if validation fails
     }
 

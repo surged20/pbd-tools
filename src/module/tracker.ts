@@ -256,15 +256,24 @@ export async function updateTracker(): Promise<void> {
                 alias = storedAlias;
             } else {
                 const options: AbbreviateOptions = {
-                    length: game.settings.get(MODULE_NAME, "abbr-length") as number,
-                    strict: game.settings.get(MODULE_NAME, "abbr-strict") as boolean,
+                    length: game.settings.get(
+                        MODULE_NAME,
+                        "abbr-length",
+                    ) as number,
+                    strict: game.settings.get(
+                        MODULE_NAME,
+                        "abbr-strict",
+                    ) as boolean,
                 };
                 alias = abbreviate(combatant.name, options).toLowerCase();
             }
         } else {
             const options: AbbreviateOptions = {
                 length: game.settings.get(MODULE_NAME, "abbr-length") as number,
-                strict: game.settings.get(MODULE_NAME, "abbr-strict") as boolean,
+                strict: game.settings.get(
+                    MODULE_NAME,
+                    "abbr-strict",
+                ) as boolean,
             };
             alias = abbreviate(combatant.name, options).toLowerCase();
         }

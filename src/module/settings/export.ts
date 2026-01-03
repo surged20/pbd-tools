@@ -4,7 +4,7 @@ import { getActiveChannels } from "../helpers.ts";
 import type { FormApplicationOptions } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 import type { SettingRegistration } from "foundry-pf2e/foundry/client/helpers/client-settings.mjs";
 // Runtime globals
-declare const SettingsConfig: any;
+declare const SettingsConfig: { reloadConfirm: () => void };
 
 export class ExportSettings extends SettingsMenuPbdTools {
     static override namespace = "ExportSettings";

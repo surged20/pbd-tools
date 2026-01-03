@@ -53,38 +53,57 @@ function validateEmbed(embed: DiscordEmbed, index: number): ValidationResult {
     const result: ValidationResult = {
         valid: true,
         errors: [],
-        warnings: []
+        warnings: [],
     };
 
     // Check title length
     if (embed.title && embed.title.length > DISCORD_LIMITS.EMBED_TITLE_MAX) {
         result.valid = false;
-        result.errors.push(`Embed ${index + 1}: Title exceeds ${DISCORD_LIMITS.EMBED_TITLE_MAX} characters (${embed.title.length} chars)`);
+        result.errors.push(
+            `Embed ${index + 1}: Title exceeds ${DISCORD_LIMITS.EMBED_TITLE_MAX} characters (${embed.title.length} chars)`,
+        );
     }
 
     // Check description length
-    if (embed.description && embed.description.length > DISCORD_LIMITS.EMBED_DESCRIPTION_MAX) {
+    if (
+        embed.description &&
+        embed.description.length > DISCORD_LIMITS.EMBED_DESCRIPTION_MAX
+    ) {
         result.valid = false;
-        result.errors.push(`Embed ${index + 1}: Description exceeds ${DISCORD_LIMITS.EMBED_DESCRIPTION_MAX} characters (${embed.description.length} chars)`);
+        result.errors.push(
+            `Embed ${index + 1}: Description exceeds ${DISCORD_LIMITS.EMBED_DESCRIPTION_MAX} characters (${embed.description.length} chars)`,
+        );
     }
 
     // Check footer text length
-    if (embed.footer?.text && embed.footer.text.length > DISCORD_LIMITS.EMBED_FOOTER_TEXT_MAX) {
+    if (
+        embed.footer?.text &&
+        embed.footer.text.length > DISCORD_LIMITS.EMBED_FOOTER_TEXT_MAX
+    ) {
         result.valid = false;
-        result.errors.push(`Embed ${index + 1}: Footer text exceeds ${DISCORD_LIMITS.EMBED_FOOTER_TEXT_MAX} characters (${embed.footer.text.length} chars)`);
+        result.errors.push(
+            `Embed ${index + 1}: Footer text exceeds ${DISCORD_LIMITS.EMBED_FOOTER_TEXT_MAX} characters (${embed.footer.text.length} chars)`,
+        );
     }
 
     // Check author name length
-    if (embed.author?.name && embed.author.name.length > DISCORD_LIMITS.EMBED_AUTHOR_NAME_MAX) {
+    if (
+        embed.author?.name &&
+        embed.author.name.length > DISCORD_LIMITS.EMBED_AUTHOR_NAME_MAX
+    ) {
         result.valid = false;
-        result.errors.push(`Embed ${index + 1}: Author name exceeds ${DISCORD_LIMITS.EMBED_AUTHOR_NAME_MAX} characters (${embed.author.name.length} chars)`);
+        result.errors.push(
+            `Embed ${index + 1}: Author name exceeds ${DISCORD_LIMITS.EMBED_AUTHOR_NAME_MAX} characters (${embed.author.name.length} chars)`,
+        );
     }
 
     // Check total embed size
     const embedSize = calculateEmbedSize(embed);
     if (embedSize > DISCORD_LIMITS.EMBED_TOTAL_CHAR_LIMIT) {
         result.valid = false;
-        result.errors.push(`Embed ${index + 1}: Total size exceeds ${DISCORD_LIMITS.EMBED_TOTAL_CHAR_LIMIT} characters (${embedSize} chars)`);
+        result.errors.push(
+            `Embed ${index + 1}: Total size exceeds ${DISCORD_LIMITS.EMBED_TOTAL_CHAR_LIMIT} characters (${embedSize} chars)`,
+        );
     }
 
     return result;
@@ -93,23 +112,30 @@ function validateEmbed(embed: DiscordEmbed, index: number): ValidationResult {
 /**
  * Validate a Discord message against all Discord API limits
  */
-export function validateDiscordMessage(content: string, embeds: DiscordEmbed[]): ValidationResult {
+export function validateDiscordMessage(
+    content: string,
+    embeds: DiscordEmbed[],
+): ValidationResult {
     const result: ValidationResult = {
         valid: true,
         errors: [],
-        warnings: []
+        warnings: [],
     };
 
     // Check message content length
     if (content.length > DISCORD_LIMITS.CONTENT_MAX_LENGTH) {
         result.valid = false;
-        result.errors.push(`Message content exceeds ${DISCORD_LIMITS.CONTENT_MAX_LENGTH} characters (${content.length} chars)`);
+        result.errors.push(
+            `Message content exceeds ${DISCORD_LIMITS.CONTENT_MAX_LENGTH} characters (${content.length} chars)`,
+        );
     }
 
     // Check embed count
     if (embeds.length > DISCORD_LIMITS.MAX_EMBEDS) {
         result.valid = false;
-        result.errors.push(`Too many embeds: ${embeds.length} (max ${DISCORD_LIMITS.MAX_EMBEDS})`);
+        result.errors.push(
+            `Too many embeds: ${embeds.length} (max ${DISCORD_LIMITS.MAX_EMBEDS})`,
+        );
     }
 
     // Validate individual embeds and calculate total embed size
@@ -127,16 +153,22 @@ export function validateDiscordMessage(content: string, embeds: DiscordEmbed[]):
     // Check total embeds size
     if (totalEmbedSize > DISCORD_LIMITS.TOTAL_EMBEDS_SIZE) {
         result.valid = false;
-        result.errors.push(`Total embeds size exceeds ${DISCORD_LIMITS.TOTAL_EMBEDS_SIZE} characters (${totalEmbedSize} chars)`);
+        result.errors.push(
+            `Total embeds size exceeds ${DISCORD_LIMITS.TOTAL_EMBEDS_SIZE} characters (${totalEmbedSize} chars)`,
+        );
     }
 
     // Add warnings for approaching limits
     if (content.length > DISCORD_LIMITS.CONTENT_MAX_LENGTH * 0.9) {
-        result.warnings.push(`Message content is approaching the limit (${content.length}/${DISCORD_LIMITS.CONTENT_MAX_LENGTH} chars)`);
+        result.warnings.push(
+            `Message content is approaching the limit (${content.length}/${DISCORD_LIMITS.CONTENT_MAX_LENGTH} chars)`,
+        );
     }
 
     if (totalEmbedSize > DISCORD_LIMITS.TOTAL_EMBEDS_SIZE * 0.9) {
-        result.warnings.push(`Total embeds size is approaching the limit (${totalEmbedSize}/${DISCORD_LIMITS.TOTAL_EMBEDS_SIZE} chars)`);
+        result.warnings.push(
+            `Total embeds size is approaching the limit (${totalEmbedSize}/${DISCORD_LIMITS.TOTAL_EMBEDS_SIZE} chars)`,
+        );
     }
 
     return result;
@@ -145,16 +177,21 @@ export function validateDiscordMessage(content: string, embeds: DiscordEmbed[]):
 /**
  * Log validation results to console and show UI notifications
  */
-export function handleValidationResult(result: ValidationResult, context: string): boolean {
+export function handleValidationResult(
+    result: ValidationResult,
+    context: string,
+): boolean {
     if (!result.valid) {
         const errorMessage = `Discord message validation failed for ${context}:`;
         console.warn(`[PBD-Tools] ${errorMessage}`, result.errors);
 
         // Show UI error notification
-        ui.notifications.error(`Failed to send ${context}: Message exceeds Discord size limits`);
+        ui.notifications.error(
+            `Failed to send ${context}: Message exceeds Discord size limits`,
+        );
 
         // Log detailed errors
-        result.errors.forEach(error => {
+        result.errors.forEach((error) => {
             console.warn(`[PBD-Tools] Discord validation error: ${error}`);
         });
 
@@ -163,7 +200,7 @@ export function handleValidationResult(result: ValidationResult, context: string
 
     // Log warnings if any
     if (result.warnings.length > 0) {
-        result.warnings.forEach(warning => {
+        result.warnings.forEach((warning) => {
             console.warn(`[PBD-Tools] Discord validation warning: ${warning}`);
         });
     }

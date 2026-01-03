@@ -7,7 +7,7 @@ import { getActiveChannels } from "./helpers.ts";
 import type { RegionEvent } from "foundry-pf2e/foundry/client/documents/region.mjs";
 
 // Runtime globals
-declare const RegionBehavior: any;
+declare const RegionBehavior: unknown;
 
 type PostDiscordTypeSchema = {
     channel: fields.StringField;
@@ -95,10 +95,21 @@ export function regionsInit(): void {
         "pbd-tools.postDiscord": "TYPES.RegionBehavior.pbd-tools.postDiscord",
     });
 
-    (foundry.applications.apps.DocumentSheetConfig.registerSheet as any)(
+    (
+        foundry.applications.apps.DocumentSheetConfig.registerSheet as (
+            doc: unknown,
+            scope: string,
+            sheetClass: unknown,
+            options: { types: string[]; makeDefault: boolean },
+        ) => void
+    )(
         RegionBehavior,
         "pbd-tools",
-        (foundry.applications.sheets as any).RegionBehaviorConfig,
+        (
+            foundry.applications.sheets as unknown as {
+                RegionBehaviorConfig: unknown;
+            }
+        ).RegionBehaviorConfig,
         {
             types: ["pbd-tools.postDiscord"],
             makeDefault: true,

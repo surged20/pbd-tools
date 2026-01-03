@@ -6,7 +6,7 @@ import type {
 } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 
 // Runtime globals available in Foundry
-// @ts-ignore - FormApplication is available globally in Foundry
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const FormApplication: any;
 
 export type PartialSettingsData = Omit<SettingRegistration, "scope" | "config">;
@@ -21,7 +21,7 @@ export interface MenuTemplateData extends FormApplicationData {
 }
 
 /** An adjusted copy of the settings menu from core pf2e meant for the module */
-// @ts-ignore - Extending from runtime global FormApplication
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class SettingsMenuPbdTools extends FormApplication {
     static readonly namespace: string;
 
@@ -71,7 +71,7 @@ export class SettingsMenuPbdTools extends FormApplication {
             label: `${MODULE_NAME}.Setting.${this.namespace}.Label`,
             hint: `${MODULE_NAME}.Setting.${this.namespace}.Hint`,
             icon: icon,
-            // @ts-ignore - Runtime registration works correctly
+            // @ts-expect-error - Runtime registration works correctly
             type: this,
             restricted: restricted,
         });

@@ -1,4 +1,10 @@
-import type { ActorPF2e, CharacterPF2e, HazardPF2e, NPCPF2e } from "foundry-pf2e";
+import type {
+    ActorPF2e,
+    CharacterPF2e,
+    EncounterPF2e,
+    HazardPF2e,
+    NPCPF2e,
+} from "foundry-pf2e";
 import abbreviate from "abbreviate";
 import { tsvFormat } from "d3-dsv";
 
@@ -16,10 +22,7 @@ function spoilers(value) {
         : value;
 }
 
-function getAbilities(
-    actor: NPCPF2e,
-    record: SageNpcRecord,
-): SageNpcRecord {
+function getAbilities(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
     record["str"] = spoilers(actor.system.abilities.str.mod);
     record["dex"] = spoilers(actor.system.abilities.dex.mod);
     record["con"] = spoilers(actor.system.abilities.con.mod);
@@ -40,10 +43,7 @@ function getSaves(
     return record;
 }
 
-function getSkills(
-    actor: NPCPF2e,
-    record: SageNpcRecord,
-): SageNpcRecord {
+function getSkills(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
     let skills = "";
     const lores = actor.itemTypes.lore || [];
     const skillList = [
@@ -85,10 +85,7 @@ function getSkills(
     return record;
 }
 
-function getStrikes(
-    actor: NPCPF2e,
-    record: SageNpcRecord,
-): SageNpcRecord {
+function getStrikes(actor: NPCPF2e, record: SageNpcRecord): SageNpcRecord {
     let attacks = "";
     const strikes = [...(actor.itemTypes.melee || [])];
     for (const strike of strikes) {
@@ -126,7 +123,9 @@ export function generateDefaultAlias(name: string): string {
     return abbreviate(name, options).toLowerCase();
 }
 
-export async function getActorAlias(actor: ActorPF2e): Promise<string | undefined> {
+export async function getActorAlias(
+    actor: ActorPF2e,
+): Promise<string | undefined> {
     try {
         return actor.getFlag("pbd-tools", "alias") as string | undefined;
     } catch (error) {
@@ -135,7 +134,10 @@ export async function getActorAlias(actor: ActorPF2e): Promise<string | undefine
     }
 }
 
-export async function setActorAlias(actor: ActorPF2e, alias: string): Promise<void> {
+export async function setActorAlias(
+    actor: ActorPF2e,
+    alias: string,
+): Promise<void> {
     try {
         await actor.setFlag("pbd-tools", "alias", alias);
     } catch (error) {
@@ -144,7 +146,10 @@ export async function setActorAlias(actor: ActorPF2e, alias: string): Promise<vo
     }
 }
 
-function getHazardStats(actor: HazardPF2e, record: SageNpcRecord): SageNpcRecord {
+function getHazardStats(
+    actor: HazardPF2e,
+    record: SageNpcRecord,
+): SageNpcRecord {
     if (actor.system.attributes.ac) {
         if (actor?.armorClass?.value) {
             record["ac"] = spoilers(actor.armorClass.value);
@@ -233,7 +238,8 @@ export async function createNpcTsvWithDialog(
         });
 
         // Get the final alias
-        const finalAlias = dialogResult[0].editedAlias || dialogResult[0].originalAlias;
+        const finalAlias =
+            dialogResult[0].editedAlias || dialogResult[0].originalAlias;
 
         // Save the alias if it was changed
         if (dialogResult[0].editedAlias) {
@@ -270,7 +276,7 @@ export async function createNpcTsvWithDialog(
 }
 
 export async function createEncounterNpcsTsvWithDialog(
-    encounter: any,
+    encounter: EncounterPF2e,
 ): Promise<string> {
     const actorDataList: ActorAliasData[] = [];
 
@@ -281,7 +287,7 @@ export async function createEncounterNpcsTsvWithDialog(
     // Collect all complex NPCs/Hazards from the encounter
     for (const turn of encounter.turns) {
         const actor = turn.actor;
-        if (isComplexHazardOrNpc(actor)) {
+        if (actor && isComplexHazardOrNpc(actor)) {
             // Get stored alias or generate default
             const storedAlias = await getActorAlias(actor);
             const defaultAlias = generateDefaultAlias(actor.name);
@@ -302,7 +308,7 @@ export async function createEncounterNpcsTsvWithDialog(
     try {
         // Show dialog for all actors
         const dialogResult = await ActorAliasDialog.showDialog({
-            title: `Edit Actor Aliases - ${encounter.name || "Encounter"}`,
+            title: "Edit Actor Aliases - Encounter",
             actors: actorDataList,
             onConfirm: (actors) => actors,
         });
@@ -347,14 +353,15 @@ export async function createEncounterNpcsTsvWithDialog(
 }
 
 export async function createFolderNpcsTsvWithDialog(
-    folder: any,
+    folder: Folder,
 ): Promise<string> {
     const actorDataList: ActorAliasData[] = [];
 
     // Recursively collect all actors from folder and subfolders
-    function collectActors(currentFolder: any) {
+    function collectActors(currentFolder: Folder): void {
         // Add actors from current folder
-        for (const actor of currentFolder.contents) {
+        for (const content of currentFolder.contents) {
+            const actor = content as unknown as ActorPF2e;
             if (isComplexHazardOrNpc(actor)) {
                 actorDataList.push({
                     name: actor.name,
@@ -365,8 +372,10 @@ export async function createFolderNpcsTsvWithDialog(
         }
 
         // Recursively process subfolders
-        for (const subfolder of currentFolder.children || []) {
-            collectActors(subfolder);
+        for (const subfolder of currentFolder.children) {
+            if (subfolder instanceof Folder) {
+                collectActors(subfolder);
+            }
         }
     }
 
@@ -431,15 +440,15 @@ export async function createFolderNpcsTsvWithDialog(
 }
 
 export async function createSceneNpcsTsvWithDialog(
-    scene: any,
+    scene: Scene,
 ): Promise<string> {
     const actorDataList: ActorAliasData[] = [];
-    const npcTokens: any[] = [];
+    const npcTokens: TokenDocument[] = [];
 
     // Collect all NPC/Hazard tokens from the scene
     for (const token of scene.tokens) {
-        const actor = token.actor;
-        if (isComplexHazardOrNpc(actor)) {
+        const actor = token.actor as ActorPF2e | null;
+        if (actor && isComplexHazardOrNpc(actor)) {
             npcTokens.push(token);
 
             // Get stored alias or generate default
@@ -515,7 +524,8 @@ export async function exportPcWithAliasDialog(
 ): Promise<void> {
     try {
         // Get the current alias from flags or generate a default one
-        const currentAlias = await getActorAlias(actor) || generateDefaultAlias(actor.name);
+        const currentAlias =
+            (await getActorAlias(actor)) || generateDefaultAlias(actor.name);
 
         // Prepare actor data for the dialog
         const actorData: ActorAliasData = {
@@ -532,7 +542,8 @@ export async function exportPcWithAliasDialog(
         });
 
         // Get the final alias (edited or original)
-        const finalAlias = dialogResult[0].editedAlias || dialogResult[0].originalAlias;
+        const finalAlias =
+            dialogResult[0].editedAlias || dialogResult[0].originalAlias;
 
         // Save the alias if it was changed
         if (dialogResult[0].editedAlias) {
@@ -542,11 +553,13 @@ export async function exportPcWithAliasDialog(
         // Import and call the original PC export function
         const { exportPcJson } = await import("./export.ts");
         await exportPcJson(actor, server);
-
     } catch (error) {
         // User cancelled dialog or other error
         if (error.message !== "Dialog cancelled") {
-            console.error("[PBD-Tools] Error in PC export with alias dialog:", error);
+            console.error(
+                "[PBD-Tools] Error in PC export with alias dialog:",
+                error,
+            );
             ui.notifications.error("Failed to export PC");
         }
     }

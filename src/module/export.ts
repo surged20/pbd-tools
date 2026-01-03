@@ -1,4 +1,10 @@
-import type { ActorPF2e, CharacterPF2e, EncounterPF2e, HazardPF2e, NPCPF2e } from "foundry-pf2e";
+import type {
+    ActorPF2e,
+    CharacterPF2e,
+    EncounterPF2e,
+    HazardPF2e,
+    NPCPF2e,
+} from "foundry-pf2e";
 
 import { MODULE_NAME } from "./constants.ts";
 
@@ -14,7 +20,7 @@ declare const foundry: {
                         file: File,
                         body?: Record<string, unknown>,
                         options?: { notify?: boolean },
-                    ): Promise<any>;
+                    ): Promise<unknown>;
                 };
             };
         };
@@ -31,7 +37,7 @@ import {
     createSceneNpcsTsvWithDialog,
 } from "./npcs.ts";
 
-function removeBlankLines(str) {
+function removeBlankLines(str: string): string {
     return str
         .split(/\r?\n/)
         .filter((line) => line.trim() !== "")
@@ -53,11 +59,13 @@ function createNpcMessage(title: string, fileName: string): string {
 }
 
 async function postNpcChatMessage(message: string): Promise<void> {
-    const chatData: any = {
+    const chatData = {
         user: game.user.id,
         speaker: ChatMessage.getSpeaker(),
         content: message,
-        whisper: ChatMessage.getWhisperRecipients(game.user.name),
+        whisper: ChatMessage.getWhisperRecipients(game.user.name).map(
+            (u) => u.id,
+        ),
     };
     await ChatMessage.create(chatData);
 }
@@ -136,7 +144,9 @@ export async function exportActorNpcTsv(
         actor.isToken && actor?.token?.name ? actor.token.name : actor.name;
 
     try {
-        const tsvData = await createNpcTsvWithDialog(actor as HazardPF2e | NPCPF2e);
+        const tsvData = await createNpcTsvWithDialog(
+            actor as HazardPF2e | NPCPF2e,
+        );
         await exportNpcTsv(tsvData, name, server);
     } catch (error) {
         // User cancelled the dialog - do nothing
@@ -213,7 +223,7 @@ async function postPcChatMessage(message: string): Promise<void> {
     await ChatMessage.create(chatData);
 }
 
-async function uploadPcJson(jsonFile): Promise<void> {
+async function uploadPcJson(jsonFile: File): Promise<void> {
     if (!game.user.hasPermission("FILES_UPLOAD")) {
         ui.notifications.error("Cannot export PC: File upload not permitted");
         return;

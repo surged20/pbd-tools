@@ -11,10 +11,7 @@ import { regionsInit } from "./module/regions.ts";
 import { isChannelActive } from "./module/helpers.ts";
 import { registerSettings } from "./module/settings/settings.ts";
 import { updateTracker } from "./module/tracker.ts";
-import {
-    postDiscordImage,
-    postDiscord,
-} from "./module/discord.ts";
+import { postDiscordImage, postDiscord } from "./module/discord.ts";
 import { initContextMenu } from "./module/context-menu.ts";
 import {
     getInfluencePage,
@@ -25,12 +22,14 @@ import { sendNPCStatblock } from "./module/npc-statblock.ts";
 import type { ContextMenuEntry } from "foundry-pf2e/foundry/client/applications/ux/context-menu.mjs";
 import type { ApplicationV1HeaderButton } from "foundry-pf2e/foundry/client/appv1/api/application-v1.mjs";
 // Runtime globals
-declare const getTemplate: (path: string, id?: string) => Promise<any>;
+declare const getTemplate: (path: string, id?: string) => Promise<unknown>;
 
 // Foundry classes available at runtime
-declare const Application: any;
-declare const ImagePopout: any;
-declare const JournalSheet: any;
+declare const JournalSheet: {
+    prototype: {
+        _getEntryContextOptions: () => ContextMenuEntry[];
+    };
+};
 
 Hooks.on("init", () => {
     console.log("[PBD-Tools] Module init hook called");
@@ -47,7 +46,7 @@ Hooks.on("init", () => {
             OOC: Channel.OOC,
             GM: Channel.GM,
         };
-        (moduleData as any).api = {
+        (moduleData as { api?: unknown }).api = {
             postDiscord,
             Channel: ChannelExport,
             convertToMarkdown,
@@ -65,56 +64,64 @@ Hooks.on("ready", () => {
 });
 
 // Hook to store auto-generated aliases on actor creation (NPCs, Hazards, and PCs)
-Hooks.on("createActor", async (actor: ActorPF2e, _options: any, _userId: string) => {
-    // Only process NPCs, Hazards, and PCs, and only for GMs
-    if (!game.user.isGM) return;
-    if (!actor.isOfType("npc", "hazard", "character")) return;
+Hooks.on(
+    "createActor",
+    async (actor: ActorPF2e, _options: unknown, _userId: string) => {
+        // Only process NPCs, Hazards, and PCs, and only for GMs
+        if (!game.user.isGM) return;
+        if (!actor.isOfType("npc", "hazard", "character")) return;
 
-    // Generate and store the default alias in flags
-    const { generateDefaultAlias } = await import("./module/npcs.ts");
-    const alias = generateDefaultAlias(actor.name);
+        // Generate and store the default alias in flags
+        const { generateDefaultAlias } = await import("./module/npcs.ts");
+        const alias = generateDefaultAlias(actor.name);
 
-    try {
-        await actor.setFlag("pbd-tools", "alias", alias);
-    } catch (error) {
-        console.warn("[PBD-Tools] Failed to set alias flag on actor creation:", error);
-    }
-});
+        try {
+            await actor.setFlag("pbd-tools", "alias", alias);
+        } catch (error) {
+            console.warn(
+                "[PBD-Tools] Failed to set alias flag on actor creation:",
+                error,
+            );
+        }
+    },
+);
 
 // Hook into Scene context menus (both Navigation and Directory) using the getSceneContextOptions hook
-Hooks.on("getSceneContextOptions", (_html: HTMLElement, entryOptions: ContextMenuEntry[]) => {
-    if (!game.user.isGM) return;
+Hooks.on(
+    "getSceneContextOptions",
+    (_html: HTMLElement, entryOptions: ContextMenuEntry[]) => {
+        if (!game.user.isGM) return;
 
-    // Add our export options to the scene context menu (works for both Navigation and Directory)
-    entryOptions.push({
-        name: `${MODULE_NAME}.Export.Server`,
-        icon: '<i class="fas fa-cloud-upload"></i>',
-        callback: (li: HTMLElement) => {
-            // Scene Navigation uses sceneId, Scene Directory uses entryId
-            const sceneId = li.dataset.sceneId || li.dataset.entryId;
-            if (sceneId) {
-                const scene = game.scenes.get(sceneId);
-                if (scene) exportSceneNpcTsv(scene, true);
-            }
-        },
-        condition: () => !!game.user.isGM
-    });
+        // Add our export options to the scene context menu (works for both Navigation and Directory)
+        entryOptions.push({
+            name: `${MODULE_NAME}.Export.Server`,
+            icon: '<i class="fas fa-cloud-upload"></i>',
+            callback: (li: HTMLElement) => {
+                // Scene Navigation uses sceneId, Scene Directory uses entryId
+                const sceneId = li.dataset.sceneId || li.dataset.entryId;
+                if (sceneId) {
+                    const scene = game.scenes.get(sceneId);
+                    if (scene) exportSceneNpcTsv(scene, true);
+                }
+            },
+            condition: () => !!game.user.isGM,
+        });
 
-    entryOptions.push({
-        name: `${MODULE_NAME}.Export.Download`,
-        icon: '<i class="fas fa-download"></i>',
-        callback: (li: HTMLElement) => {
-            // Scene Navigation uses sceneId, Scene Directory uses entryId
-            const sceneId = li.dataset.sceneId || li.dataset.entryId;
-            if (sceneId) {
-                const scene = game.scenes.get(sceneId);
-                if (scene) exportSceneNpcTsv(scene, false);
-            }
-        },
-        condition: () => !!game.user.isGM
-    });
-});
-
+        entryOptions.push({
+            name: `${MODULE_NAME}.Export.Download`,
+            icon: '<i class="fas fa-download"></i>',
+            callback: (li: HTMLElement) => {
+                // Scene Navigation uses sceneId, Scene Directory uses entryId
+                const sceneId = li.dataset.sceneId || li.dataset.entryId;
+                if (sceneId) {
+                    const scene = game.scenes.get(sceneId);
+                    if (scene) exportSceneNpcTsv(scene, false);
+                }
+            },
+            condition: () => !!game.user.isGM,
+        });
+    },
+);
 
 Hooks.on("preUpdateToken", (_token: TokenDocument) => {
     if (
@@ -256,14 +263,15 @@ Hooks.on(
 
 function actorFolderCallback(li: HTMLElement, server: boolean): void {
     const di = li.closest(".directory-item");
-    const folderId = (di as HTMLElement)?.dataset?.folderId || (di as any)?.data?.("folderId");
+    const folderId = (di as HTMLElement)?.dataset?.folderId;
+    if (!folderId) return;
     const folder = game.folders.get(folderId);
     if (folder) exportFolderNpcTsv(folder, server);
 }
 
 Hooks.on(
     "getActorFolderContextOptions",
-    (_application: any, entryOptions: ContextMenuEntry[]) => {
+    (_application: unknown, entryOptions: ContextMenuEntry[]) => {
         entryOptions.push({
             name: `${MODULE_NAME}.Export.Server`,
             icon: '<i class="fas fa-cloud-upload"></i>',
@@ -306,7 +314,7 @@ function actorEntryCondition(li: HTMLElement): boolean {
 
 Hooks.on(
     "getActorContextOptions",
-    (_application: any, entryOptions: ContextMenuEntry[]) => {
+    (_application: unknown, entryOptions: ContextMenuEntry[]) => {
         entryOptions.push({
             name: `${MODULE_NAME}.Export.Server`,
             icon: '<i class="fas fa-cloud-upload"></i>',
@@ -362,14 +370,14 @@ Hooks.on(
 // NPC/Actor sheet header button handler
 Hooks.on(
     "getActorSheetHeaderButtons",
-    (app: any, buttons: ApplicationV1HeaderButton[]) => {
+    (app: { actor?: ActorPF2e }, buttons: ApplicationV1HeaderButton[]) => {
         if (!game.user.isGM) return;
 
         if (
             isPF2e() &&
             isChannelActive(Channel.GM) &&
-            (app as any).actor &&
-            isComplexHazardOrNpc((app as any).actor)
+            app.actor &&
+            isComplexHazardOrNpc(app.actor)
         ) {
             const server: boolean = game.settings.get(
                 MODULE_NAME,
@@ -381,7 +389,7 @@ Hooks.on(
                 class: "send-npc-to-rpg-sage",
                 icon: "fas " + icon,
                 onclick: async () => {
-                    await exportActorNpcTsv((app as any).actor, server);
+                    if (app.actor) await exportActorNpcTsv(app.actor, server);
                 },
             };
             buttons.unshift(button);
@@ -389,36 +397,59 @@ Hooks.on(
     },
 );
 
+interface ImagePopoutLike {
+    options?: { src?: string };
+    image?: string;
+    src?: string;
+    document?: { src?: string };
+    data?: { src?: string };
+    object?: { src?: string };
+}
+
+interface HeaderControlButton {
+    action: string;
+    icon: string;
+    label: string;
+    visible: boolean;
+    onClick: (event?: Event) => void;
+}
+
 // ImagePopout dropdown button handler
-Hooks.on("getHeaderControlsImagePopout", (popout, buttons) => {
-    if (!game.user.isGM) return;
+Hooks.on(
+    "getHeaderControlsImagePopout",
+    (popout: ImagePopoutLike, buttons: HeaderControlButton[]) => {
+        if (!game.user.isGM) return;
 
-    const createPopoutButton = (channel: Channel, label: string) => {
-        return {
-            action: `pbd-discord-${label.toLowerCase()}`,
-            icon: "fa-brands fa-discord",
-            label: `${MODULE_NAME}.Discord.${label}`,
-            visible: true,
-            onClick: (event: any) => {
-                event?.preventDefault?.();
-                event?.stopPropagation?.();
-                postDiscordImage(channel, popout);
-            },
+        const createPopoutButton = (
+            channel: Channel,
+            label: string,
+        ): HeaderControlButton => {
+            return {
+                action: `pbd-discord-${label.toLowerCase()}`,
+                icon: "fa-brands fa-discord",
+                label: `${MODULE_NAME}.Discord.${label}`,
+                visible: true,
+                onClick: (event?: Event) => {
+                    event?.preventDefault?.();
+                    event?.stopPropagation?.();
+                    postDiscordImage(channel, popout);
+                },
+            };
         };
-    };
 
-    if (isChannelActive(Channel.IC)) {
-        buttons.unshift(createPopoutButton(Channel.IC, "IC"));
-    }
+        if (isChannelActive(Channel.IC)) {
+            buttons.unshift(createPopoutButton(Channel.IC, "IC"));
+        }
 
-    if (isChannelActive(Channel.OOC)) {
-        buttons.unshift(createPopoutButton(Channel.OOC, "OOC"));
-    }
+        if (isChannelActive(Channel.OOC)) {
+            buttons.unshift(createPopoutButton(Channel.OOC, "OOC"));
+        }
 
-    if (isChannelActive(Channel.GM)) {
-        buttons.unshift(createPopoutButton(Channel.GM, "GM"));
-    }
-});
+        if (isChannelActive(Channel.GM)) {
+            buttons.unshift(createPopoutButton(Channel.GM, "GM"));
+        }
+    },
+);
 
 // Note: renderImagePopout hook not needed for ApplicationV2 dropdown buttons
 
@@ -427,11 +458,13 @@ Hooks.on("ready", () => {
     if (!game.user.isGM) return;
 
     // Store the original _getEntryContextOptions method
-    const originalGetEntryContextOptions = (JournalSheet as any).prototype._getEntryContextOptions;
+    const originalGetEntryContextOptions =
+        JournalSheet.prototype._getEntryContextOptions;
 
     // Extend the method to add our Discord options
-    (JournalSheet as any).prototype._getEntryContextOptions = function () {
-        const options: ContextMenuEntry[] = originalGetEntryContextOptions.call(this);
+    JournalSheet.prototype._getEntryContextOptions = function () {
+        const options: ContextMenuEntry[] =
+            originalGetEntryContextOptions.call(this);
 
         // Add Discord post options for each active channel
         if (isChannelActive(Channel.IC)) {
@@ -442,20 +475,59 @@ Hooks.on("ready", () => {
                     const pageId = li.dataset.pageId || li.dataset.entryId;
 
                     // Get the journal sheet instance to find the page
-                    const journalSheet = li.closest('.journal-sheet') as HTMLElement;
-                    if (journalSheet && (journalSheet as any).dataset) {
-                        const app = (ui as any).windows[parseInt((journalSheet as any).dataset.appid)] as any;
-                        if (app && app.document && app.document.pages && pageId) {
-                            const page = app.document.pages.find((p: any) => p.id === pageId || p.sort === pageId || p.name === pageId);
-                            if (page) {
-                                import("./module/discord.ts").then(({ postDiscordJournalPage }) => {
-                                    postDiscordJournalPage(Channel.IC, page);
-                                });
+                    const journalSheet = li.closest(
+                        ".journal-sheet",
+                    ) as HTMLElement;
+                    if (journalSheet?.dataset) {
+                        const appId = (
+                            journalSheet.dataset as DOMStringMap & {
+                                appid?: string;
+                            }
+                        ).appid;
+                        if (appId) {
+                            const app = (
+                                ui as {
+                                    windows: Record<
+                                        number,
+                                        | {
+                                              document?: {
+                                                  pages?: {
+                                                      find: (
+                                                          fn: (
+                                                              p: JournalEntryPage,
+                                                          ) => boolean,
+                                                      ) =>
+                                                          | JournalEntryPage
+                                                          | undefined;
+                                                  };
+                                              };
+                                          }
+                                        | undefined
+                                    >;
+                                }
+                            ).windows[parseInt(appId)];
+                            if (app?.document?.pages && pageId) {
+                                const page = app.document.pages.find(
+                                    (p: JournalEntryPage) =>
+                                        p.id === pageId ||
+                                        String(p.sort) === pageId ||
+                                        p.name === pageId,
+                                );
+                                if (page) {
+                                    import("./module/discord.ts").then(
+                                        ({ postDiscordJournalPage }) => {
+                                            postDiscordJournalPage(
+                                                Channel.IC,
+                                                page,
+                                            );
+                                        },
+                                    );
+                                }
                             }
                         }
                     }
                 },
-                condition: () => true
+                condition: () => true,
             });
         }
 
@@ -467,20 +539,59 @@ Hooks.on("ready", () => {
                     const pageId = li.dataset.pageId || li.dataset.entryId;
 
                     // Get the journal sheet instance to find the page
-                    const journalSheet = li.closest('.journal-sheet') as HTMLElement;
-                    if (journalSheet && (journalSheet as any).dataset) {
-                        const app = (ui as any).windows[parseInt((journalSheet as any).dataset.appid)] as any;
-                        if (app && app.document && app.document.pages && pageId) {
-                            const page = app.document.pages.find((p: any) => p.id === pageId || p.sort === pageId || p.name === pageId);
-                            if (page) {
-                                import("./module/discord.ts").then(({ postDiscordJournalPage }) => {
-                                    postDiscordJournalPage(Channel.OOC, page);
-                                });
+                    const journalSheet = li.closest(
+                        ".journal-sheet",
+                    ) as HTMLElement;
+                    if (journalSheet?.dataset) {
+                        const appId = (
+                            journalSheet.dataset as DOMStringMap & {
+                                appid?: string;
+                            }
+                        ).appid;
+                        if (appId) {
+                            const app = (
+                                ui as {
+                                    windows: Record<
+                                        number,
+                                        | {
+                                              document?: {
+                                                  pages?: {
+                                                      find: (
+                                                          fn: (
+                                                              p: JournalEntryPage,
+                                                          ) => boolean,
+                                                      ) =>
+                                                          | JournalEntryPage
+                                                          | undefined;
+                                                  };
+                                              };
+                                          }
+                                        | undefined
+                                    >;
+                                }
+                            ).windows[parseInt(appId)];
+                            if (app?.document?.pages && pageId) {
+                                const page = app.document.pages.find(
+                                    (p: JournalEntryPage) =>
+                                        p.id === pageId ||
+                                        String(p.sort) === pageId ||
+                                        p.name === pageId,
+                                );
+                                if (page) {
+                                    import("./module/discord.ts").then(
+                                        ({ postDiscordJournalPage }) => {
+                                            postDiscordJournalPage(
+                                                Channel.OOC,
+                                                page,
+                                            );
+                                        },
+                                    );
+                                }
                             }
                         }
                     }
                 },
-                condition: () => true
+                condition: () => true,
             });
         }
 
@@ -492,28 +603,65 @@ Hooks.on("ready", () => {
                     const pageId = li.dataset.pageId || li.dataset.entryId;
 
                     // Get the journal sheet instance to find the page
-                    const journalSheet = li.closest('.journal-sheet') as HTMLElement;
-                    if (journalSheet && (journalSheet as any).dataset) {
-                        const app = (ui as any).windows[parseInt((journalSheet as any).dataset.appid)] as any;
-                        if (app && app.document && app.document.pages && pageId) {
-                            const page = app.document.pages.find((p: any) => p.id === pageId || p.sort === pageId || p.name === pageId);
-                            if (page) {
-                                import("./module/discord.ts").then(({ postDiscordJournalPage }) => {
-                                    postDiscordJournalPage(Channel.GM, page);
-                                });
+                    const journalSheet = li.closest(
+                        ".journal-sheet",
+                    ) as HTMLElement;
+                    if (journalSheet?.dataset) {
+                        const appId = (
+                            journalSheet.dataset as DOMStringMap & {
+                                appid?: string;
+                            }
+                        ).appid;
+                        if (appId) {
+                            const app = (
+                                ui as {
+                                    windows: Record<
+                                        number,
+                                        | {
+                                              document?: {
+                                                  pages?: {
+                                                      find: (
+                                                          fn: (
+                                                              p: JournalEntryPage,
+                                                          ) => boolean,
+                                                      ) =>
+                                                          | JournalEntryPage
+                                                          | undefined;
+                                                  };
+                                              };
+                                          }
+                                        | undefined
+                                    >;
+                                }
+                            ).windows[parseInt(appId)];
+                            if (app?.document?.pages && pageId) {
+                                const page = app.document.pages.find(
+                                    (p: JournalEntryPage) =>
+                                        p.id === pageId ||
+                                        String(p.sort) === pageId ||
+                                        p.name === pageId,
+                                );
+                                if (page) {
+                                    import("./module/discord.ts").then(
+                                        ({ postDiscordJournalPage }) => {
+                                            postDiscordJournalPage(
+                                                Channel.GM,
+                                                page,
+                                            );
+                                        },
+                                    );
+                                }
                             }
                         }
                     }
                 },
-                condition: () => true
+                condition: () => true,
             });
         }
 
         return options;
     };
 });
-
-
 
 function rerenderApps(_path: string): void {
     const apps = [
@@ -527,8 +675,28 @@ function rerenderApps(_path: string): void {
 }
 
 // HMR for language and template files
-if ((import.meta as any).hot) {
-    (import.meta as any).hot.on(
+if (
+    (
+        import.meta as unknown as {
+            hot?: {
+                on: (
+                    event: string,
+                    callback: (data: { path: string }) => Promise<void>,
+                ) => void;
+            };
+        }
+    ).hot
+) {
+    (
+        import.meta as unknown as {
+            hot: {
+                on: (
+                    event: string,
+                    callback: (data: { path: string }) => Promise<void>,
+                ) => void;
+            };
+        }
+    ).hot.on(
         "lang-update",
         async ({ path }: { path: string }): Promise<void> => {
             const lang = (await fu.fetchJsonWithTimeout(path)) as object;
@@ -548,7 +716,16 @@ if ((import.meta as any).hot) {
         },
     );
 
-    (import.meta as any).hot.on(
+    (
+        import.meta as unknown as {
+            hot: {
+                on: (
+                    event: string,
+                    callback: (data: { path: string }) => Promise<void>,
+                ) => void;
+            };
+        }
+    ).hot.on(
         "template-update",
         async ({ path }: { path: string }): Promise<void> => {
             const apply = async (): Promise<void> => {

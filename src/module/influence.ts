@@ -9,7 +9,10 @@ import {
     isChannelActive,
 } from "./helpers.ts";
 import { generateImageLink } from "./images.ts";
-import { validateDiscordMessage, handleValidationResult } from "./discord-validation.ts";
+import {
+    validateDiscordMessage,
+    handleValidationResult,
+} from "./discord-validation.ts";
 
 interface NPCDataEntry {
     revealed: boolean;
@@ -230,13 +233,22 @@ export async function postInfluenceStatblock(
 
         // Pre-validate embed size before attempting to send
         const validationResult = validateDiscordMessage("", [embed]);
-        if (!handleValidationResult(validationResult, `influence statblock for ${page.name}`)) {
+        if (
+            !handleValidationResult(
+                validationResult,
+                `influence statblock for ${page.name}`,
+            )
+        ) {
             return;
         }
 
         const username = getChannelUsername(Channel.GM);
-        const avatarLink = await generateImageLink(getChannelAvatar(Channel.GM));
-        const formData = createDiscordFormData(username, avatarLink, "", [embed]);
+        const avatarLink = await generateImageLink(
+            getChannelAvatar(Channel.GM),
+        );
+        const formData = createDiscordFormData(username, avatarLink, "", [
+            embed,
+        ]);
         await postDiscordMessage(Channel.GM, formData);
         ui.notifications.info(
             page.name + game.i18n.localize("pbd-tools.Statblock.SentInfluence"),

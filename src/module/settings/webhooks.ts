@@ -3,7 +3,9 @@ import { MODULE_NAME } from "../constants.ts";
 import { SettingsMenuPbdTools } from "./menu.ts";
 import type { SettingRegistration } from "foundry-pf2e/foundry/client/helpers/client-settings.mjs";
 // Runtime globals
-declare const SettingsConfig: any;
+declare const SettingsConfig: {
+    reloadConfirm: (options?: { world?: boolean }) => void;
+};
 
 export class DiscordWebhookSettings extends SettingsMenuPbdTools {
     static override namespace = "DiscordWebhookSettings";

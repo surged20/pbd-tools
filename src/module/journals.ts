@@ -9,7 +9,6 @@ export async function createJournalData(
     let content = "";
     let embeds: DiscordEmbed[] = [];
 
-
     if (!page) {
         console.error("[PBD-Tools] Page is null or undefined");
         return { content: "", embeds: [] };
@@ -23,10 +22,12 @@ export async function createJournalData(
         // Try different ways to access the content
         if (page.text && page.text.content) {
             pageContent = page.text.content as string;
-        } else if ((page as any).content) {
-            pageContent = (page as any).content as string;
-        } else if ((page as any).text) {
-            pageContent = (page as any).text as string;
+        } else if ((page as unknown as { content?: string }).content) {
+            pageContent = (page as unknown as { content: string }).content;
+        } else if (
+            typeof (page as unknown as { text?: string }).text === "string"
+        ) {
+            pageContent = (page as unknown as { text: string }).text;
         } else {
             console.warn(
                 "[PBD-Tools] Could not find page content, using empty string",
@@ -34,7 +35,9 @@ export async function createJournalData(
             pageContent = "";
         }
 
-        pageSrc = (page.src || (page as any).src || "") as string;
+        pageSrc = (page.src ||
+            (page as unknown as { src?: string }).src ||
+            "") as string;
     } catch (error) {
         console.error("[PBD-Tools] Error accessing page properties:", error);
         return { content: "", embeds: [] };
@@ -64,10 +67,12 @@ export async function createJournalData(
                 },
                 replacement: function (content, _node) {
                     // Strip any HTML tags from content and return just the text
-                    return content.replace(/<[^>]*>/g, '').trim();
+                    return content.replace(/<[^>]*>/g, "").trim();
                 },
             });
-            const markdownContent = turndownService.turndown(contentWithResolvedUUIDs);
+            const markdownContent = turndownService.turndown(
+                contentWithResolvedUUIDs,
+            );
 
             const embed: DiscordEmbed = {
                 title: page.name,
@@ -75,12 +80,12 @@ export async function createJournalData(
             };
             const parser = new DOMParser();
             const doc = parser.parseFromString(pageContent, "text/html");
-            const getImages = (el) =>
+            const getImages = (el: Document): (string | null)[] =>
                 [...el.getElementsByTagName("img")].map((img) =>
                     img.getAttribute("src"),
                 );
             const images = getImages(doc);
-            if (images.length > 0) {
+            if (images.length > 0 && images[0]) {
                 let link;
                 if (images[0].startsWith("http")) {
                     link = images[0];
