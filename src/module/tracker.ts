@@ -16,6 +16,7 @@ import {
     getChannelUsername,
     isComplexHazardOrNpc,
 } from "./helpers.ts";
+import { getActorAlias } from "./npcs.ts";
 
 type InitTableData = Record<string, string | number | null>;
 
@@ -31,9 +32,7 @@ function makeTitle(slug) {
 }
 
 function getUserMentions(mentions: string[]): string {
-    let content = "-#";
-
-    if (!game.settings.get(MODULE_NAME, "tracker-user-mention")) return content;
+    if (!game.settings.get(MODULE_NAME, "tracker-user-mention")) return "";
 
     const userMap = new Map<string, string>(
         game.settings.get(MODULE_NAME, "user-mention-config") as Map<
@@ -41,9 +40,11 @@ function getUserMentions(mentions: string[]): string {
             string
         >,
     );
+
+    let mentionContent = "";
     mentions.forEach((actorId: string) => {
         if (userMap.has(actorId)) {
-            content +=
+            mentionContent +=
                 " <@" +
                 userMap.get(actorId) +
                 "> (" +
@@ -52,14 +53,15 @@ function getUserMentions(mentions: string[]): string {
         }
     });
 
-    return content;
+    // Only return the "-#" prefix if there are actual mentions
+    return mentionContent ? "-#" + mentionContent : "";
 }
 
 class TrackerConfig {
     private mode: string;
 
     constructor() {
-        this.mode = game.settings.get(MODULE_NAME, "tracker-mode");
+        this.mode = game.settings.get(MODULE_NAME, "tracker-mode") as string;
     }
 
     get style(): string {
@@ -67,28 +69,37 @@ class TrackerConfig {
     }
 
     get displayAc(): string {
-        return game.settings.get(MODULE_NAME, "tracker-ac-display");
+        return game.settings.get(MODULE_NAME, "tracker-ac-display") as string;
     }
 
     get displayAlias(): boolean {
-        return game.settings.get(MODULE_NAME, "tracker-alias-display");
+        return game.settings.get(
+            MODULE_NAME,
+            "tracker-alias-display",
+        ) as boolean;
     }
 
     get displayHeroPoints(): string {
-        return game.settings.get(MODULE_NAME, "tracker-hero-points-display");
+        return game.settings.get(
+            MODULE_NAME,
+            "tracker-hero-points-display",
+        ) as string;
     }
 
     get displayHp(): string {
-        return game.settings.get(MODULE_NAME, "tracker-hp-display");
+        return game.settings.get(MODULE_NAME, "tracker-hp-display") as string;
     }
 
     get displayConditions(): string {
-        return game.settings.get(MODULE_NAME, "tracker-hp-display");
+        return game.settings.get(MODULE_NAME, "tracker-hp-display") as string;
     }
 
     get headerAc(): string {
         if (this.style === "custom") {
-            return game.settings.get(MODULE_NAME, "tracker-ac-header");
+            return game.settings.get(
+                MODULE_NAME,
+                "tracker-ac-header",
+            ) as string;
         } else {
             return "AC";
         }
@@ -96,7 +107,10 @@ class TrackerConfig {
 
     get headerAlias(): string {
         if (this.style === "custom") {
-            return game.settings.get(MODULE_NAME, "tracker-alias-header");
+            return game.settings.get(
+                MODULE_NAME,
+                "tracker-alias-header",
+            ) as string;
         } else {
             return "Alias";
         }
@@ -104,7 +118,10 @@ class TrackerConfig {
 
     get headerHp(): string {
         if (this.style === "custom") {
-            return game.settings.get(MODULE_NAME, "tracker-hp-header");
+            return game.settings.get(
+                MODULE_NAME,
+                "tracker-hp-header",
+            ) as string;
         } else {
             return "HP";
         }
@@ -112,7 +129,10 @@ class TrackerConfig {
 
     get headerHeroPoints(): string {
         if (this.style === "custom") {
-            return game.settings.get(MODULE_NAME, "tracker-hero-points-header");
+            return game.settings.get(
+                MODULE_NAME,
+                "tracker-hero-points-header",
+            ) as string;
         } else {
             return "H";
         }
@@ -120,7 +140,10 @@ class TrackerConfig {
 
     get headerInitiative(): string {
         if (this.style === "custom") {
-            return game.settings.get(MODULE_NAME, "tracker-initiative-header");
+            return game.settings.get(
+                MODULE_NAME,
+                "tracker-initiative-header",
+            ) as string;
         } else if (this.style === "compact") {
             return "I";
         } else {
@@ -137,13 +160,18 @@ class TrackerConfig {
                 game.combat?.round +
                 " :crossed_swords:\n"
             );
-        else return game.settings.get(MODULE_NAME, "tracker-preamble");
+        else
+            return game.settings.get(MODULE_NAME, "tracker-preamble") as string;
     }
 
     get postamble(): string {
         if (this.mode === "wide") return "\n🟢 May Act\n```\n\n";
         else if (this.mode === "compact") return "\n\n";
-        else return game.settings.get(MODULE_NAME, "tracker-postamble");
+        else
+            return game.settings.get(
+                MODULE_NAME,
+                "tracker-postamble",
+            ) as string;
     }
 
     get shortName(): boolean {
@@ -153,7 +181,7 @@ class TrackerConfig {
     get width(): number {
         if (this.mode === "wide") return 60;
         else if (this.mode === "compact") return 40;
-        else return game.settings.get(MODULE_NAME, "tracker-width");
+        else return game.settings.get(MODULE_NAME, "tracker-width") as number;
     }
 }
 
@@ -185,10 +213,11 @@ export async function updateTracker(): Promise<void> {
     const combatants = game.combat.turns.filter(
         (c: CombatantPF2e<EncounterPF2e>) => c.actor && !c.hidden,
     );
-    combatants.forEach((combatant: CombatantPF2e<EncounterPF2e>) => {
+
+    for (const combatant of combatants) {
         const row: InitTableData = {};
         const actor = combatant.actor;
-        if (!actor) return;
+        if (!actor) continue;
 
         // Don't use syntax highlighting for alliance in compact mode
         if (tc.style !== "compact") {
@@ -209,18 +238,36 @@ export async function updateTracker(): Promise<void> {
         else {
             if (inBlock) {
                 mentions.push(actor.id);
-                status = game.settings.get(MODULE_NAME, "tracker-status-turn");
+                status = game.settings.get(
+                    MODULE_NAME,
+                    "tracker-status-turn",
+                ) as string;
             } else {
                 status = "";
             }
         }
         row["status"] = status;
 
-        const options: AbbreviateOptions = {
-            length: game.settings.get(MODULE_NAME, "abbr-length"),
-            strict: game.settings.get(MODULE_NAME, "abbr-strict"),
-        };
-        const alias = abbreviate(combatant.name, options).toLowerCase();
+        // Get stored alias for NPCs/Hazards, or generate one for other actors
+        let alias: string;
+        if (isComplexHazardOrNpc(actor)) {
+            const storedAlias = await getActorAlias(actor);
+            if (storedAlias) {
+                alias = storedAlias;
+            } else {
+                const options: AbbreviateOptions = {
+                    length: game.settings.get(MODULE_NAME, "abbr-length") as number,
+                    strict: game.settings.get(MODULE_NAME, "abbr-strict") as boolean,
+                };
+                alias = abbreviate(combatant.name, options).toLowerCase();
+            }
+        } else {
+            const options: AbbreviateOptions = {
+                length: game.settings.get(MODULE_NAME, "abbr-length") as number,
+                strict: game.settings.get(MODULE_NAME, "abbr-strict") as boolean,
+            };
+            alias = abbreviate(combatant.name, options).toLowerCase();
+        }
 
         if (tc.shortName) {
             row["combatant"] = isComplexHazardOrNpc(actor)
@@ -291,7 +338,7 @@ export async function updateTracker(): Promise<void> {
         } else {
             conditionsData.push({ valid: "" });
         }
-    });
+    }
 
     const compactOptions = {
         maxWidth: tc.width,

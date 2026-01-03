@@ -1,0 +1,19 @@
+<form class="pbd-alias-dialog-form">
+<div class="pbd-alias-dialog-content">
+<p>Edit the auto-generated aliases for actors before export:</p>
+<div class="pbd-alias-list">
+{{#each actors}}
+<div class="pbd-alias-row" data-index="{{@index}}">
+<div class="actor-info">
+<img src="{{actor.img}}" alt="{{name}}" class="actor-avatar">
+<span class="actor-name">{{name}}</span>
+</div>
+<div class="alias-input">
+<label>Alias:</label>
+<input type="text" name="alias-{{@index}}" value="{{originalAlias}}" placeholder="{{originalAlias}}">
+</div>
+</div>
+{{/each}}
+</div>
+</div>
+</form>

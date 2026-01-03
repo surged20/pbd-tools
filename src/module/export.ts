@@ -1,15 +1,34 @@
-import { ActorPF2e, CharacterPF2e, EncounterPF2e } from "foundry-pf2e";
+import type { ActorPF2e, CharacterPF2e, EncounterPF2e, HazardPF2e, NPCPF2e } from "foundry-pf2e";
 
 import { MODULE_NAME } from "./constants.ts";
+
+// Runtime globals available in Foundry v13
+declare const foundry: {
+    applications: {
+        apps: {
+            FilePicker: {
+                implementation: {
+                    uploadPersistent(
+                        packageId: string,
+                        path: string,
+                        file: File,
+                        body?: Record<string, unknown>,
+                        options?: { notify?: boolean },
+                    ): Promise<any>;
+                };
+            };
+        };
+    };
+};
 import { postNpcDiscordMessage, postPcDiscordMessage } from "./discord.ts";
 import { isRemoteAccessible, getRemoteURL } from "./foundry.ts";
 import { convertToMarkdown } from "./helpers.ts";
 import { createPathbuilderJson } from "./pathbuilder.ts";
 import {
-    createNpcTsv,
-    createEncounterNpcsTsv,
-    createFolderNpcsTsv,
-    createSceneNpcsTsv,
+    createNpcTsvWithDialog,
+    createEncounterNpcsTsvWithDialog,
+    createFolderNpcsTsvWithDialog,
+    createSceneNpcsTsvWithDialog,
 } from "./npcs.ts";
 
 function removeBlankLines(str) {
@@ -34,7 +53,7 @@ function createNpcMessage(title: string, fileName: string): string {
 }
 
 async function postNpcChatMessage(message: string): Promise<void> {
-    const chatData = {
+    const chatData: any = {
         user: game.user.id,
         speaker: ChatMessage.getSpeaker(),
         content: message,
@@ -44,32 +63,13 @@ async function postNpcChatMessage(message: string): Promise<void> {
 }
 
 async function uploadTsvFile(tsvFile: File): Promise<boolean> {
-    const fp = new FilePicker({
-        baseApplication: "tsv",
-        width: 0,
-        height: 0,
-        top: 0,
-        left: 0,
-        scale: 1,
-        popOut: true,
-        minimizable: false,
-        resizable: false,
-        id: "tsv",
-        classes: ["tsv"],
-        title: "TSV Upload",
-        template: "tsv",
-        scrollY: [],
-        tabs: [],
-        dragDrop: [],
-        filters: [],
-    });
-    if (!fp.canUpload) {
+    if (!game.user.hasPermission("FILES_UPLOAD")) {
         ui.notifications.error(
             "Cannot export NPC(s): File upload not permitted",
         );
         return false;
     }
-    await FilePicker.uploadPersistent(
+    await foundry.applications.apps.FilePicker.implementation.uploadPersistent(
         "pbd-tools",
         "",
         tsvFile,
@@ -91,13 +91,27 @@ async function exportNpcTsv(
         type: fileType,
     });
     if (server) {
+        console.log("[PBD-Tools] Server export, uploading TSV file");
         if (await uploadTsvFile(tsvFile)) {
             const message = createNpcMessage(name, fileName);
+            console.log(
+                "[PBD-Tools] TSV upload successful, posting chat message",
+            );
             await postNpcChatMessage(message);
-            if (game.settings.get(MODULE_NAME, "post-npc-to-discord")) {
+
+            const postToDiscord = game.settings.get(
+                MODULE_NAME,
+                "post-npc-to-discord",
+            );
+            console.log("[PBD-Tools] Discord posting setting:", postToDiscord);
+
+            if (postToDiscord) {
+                console.log("[PBD-Tools] Posting NPC to Discord");
                 await postNpcDiscordMessage(
                     removeBlankLines(convertToMarkdown(message)),
                 );
+            } else {
+                console.log("[PBD-Tools] Discord posting disabled in settings");
             }
         } else {
             ui.notifications.error(
@@ -120,34 +134,57 @@ export async function exportActorNpcTsv(
 ): Promise<void> {
     const name =
         actor.isToken && actor?.token?.name ? actor.token.name : actor.name;
-    const tsvData = await createNpcTsv(actor);
-    await exportNpcTsv(tsvData, name, server);
+
+    try {
+        const tsvData = await createNpcTsvWithDialog(actor as HazardPF2e | NPCPF2e);
+        await exportNpcTsv(tsvData, name, server);
+    } catch (error) {
+        // User cancelled the dialog - do nothing
+        return;
+    }
 }
 
 export async function exportEncounterNpcTsv(
     encounter: EncounterPF2e,
     server: boolean,
 ): Promise<void> {
-    const tsvData = await createEncounterNpcsTsv(encounter);
-    const scene = game.pf2e.system.sluggify(encounter.scene.name);
+    const sceneName = encounter.scene?.name || "unknown-scene";
+    const scene = game.pf2e.system.sluggify(sceneName);
     const name = `${scene}-encounter-${encounter.id}`;
-    await exportNpcTsv(tsvData, name, server);
+
+    try {
+        const tsvData = await createEncounterNpcsTsvWithDialog(encounter);
+        await exportNpcTsv(tsvData, name, server);
+    } catch (error) {
+        // User cancelled the dialog - do nothing
+        return;
+    }
 }
 
 export async function exportFolderNpcTsv(
     folder: Folder,
     server: boolean,
 ): Promise<void> {
-    const tsvData = await createFolderNpcsTsv(folder);
-    await exportNpcTsv(tsvData, folder.name, server);
+    try {
+        const tsvData = await createFolderNpcsTsvWithDialog(folder);
+        await exportNpcTsv(tsvData, folder.name, server);
+    } catch (error) {
+        // User cancelled the dialog - do nothing
+        return;
+    }
 }
 
 export async function exportSceneNpcTsv(
     scene: Scene,
     server: boolean,
 ): Promise<void> {
-    const tsvData = await createSceneNpcsTsv(scene);
-    await exportNpcTsv(tsvData, scene.name, server);
+    try {
+        const tsvData = await createSceneNpcsTsvWithDialog(scene);
+        await exportNpcTsv(tsvData, scene.name, server);
+    } catch (error) {
+        // User cancelled the dialog - do nothing
+        return;
+    }
 }
 
 function createPcMessage(title: string, fileName: string): string {
@@ -177,30 +214,11 @@ async function postPcChatMessage(message: string): Promise<void> {
 }
 
 async function uploadPcJson(jsonFile): Promise<void> {
-    const fp = new FilePicker({
-        baseApplication: "pathbuilder-2e",
-        width: 0,
-        height: 0,
-        top: 0,
-        left: 0,
-        scale: 1,
-        popOut: true,
-        minimizable: false,
-        resizable: false,
-        id: "pathbuilder-2e",
-        classes: ["pathbuilder-2e"],
-        title: "Pathbuilder 2e",
-        template: "pathbuilder-2e",
-        scrollY: [],
-        tabs: [],
-        dragDrop: [],
-        filters: [],
-    });
-    if (!fp.canUpload) {
+    if (!game.user.hasPermission("FILES_UPLOAD")) {
         ui.notifications.error("Cannot export PC: File upload not permitted");
         return;
     }
-    await FilePicker.uploadPersistent(
+    await foundry.applications.apps.FilePicker.implementation.uploadPersistent(
         "pbd-tools",
         "",
         jsonFile,
