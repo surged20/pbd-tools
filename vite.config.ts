@@ -120,6 +120,10 @@ const config = Vite.defineConfig(({ command, mode }): Vite.UserConfig => {
                 fileName: "pbd-tools",
             },
             rollupOptions: {
+                external: [
+                    "foundry-pf2e",
+                    /^foundry-pf2e\//,
+                ],
                 output: {
                     assetFileNames: ({ name }): string => (name === "style.css" ? "styles/pbd-tools.css" : name ?? ""),
                     chunkFileNames: "[name].mjs",

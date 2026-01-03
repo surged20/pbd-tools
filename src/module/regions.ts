@@ -1,7 +1,13 @@
-import type * as fields from "foundry-pf2e/foundry/common/data/fields.d.ts";
+// foundry-pf2e types are available globally
+import type * as fields from "foundry-pf2e/foundry/common/data/fields.d.mts";
+import type { DataSchema } from "foundry-pf2e/foundry/common/data/fields.d.mts";
 import { Channel } from "./constants.ts";
 import { postDiscord } from "./discord.ts";
 import { getActiveChannels } from "./helpers.ts";
+import type { RegionEvent } from "foundry-pf2e/foundry/client/documents/region.mjs";
+
+// Runtime globals
+declare const RegionBehavior: any;
 
 type PostDiscordTypeSchema = {
     channel: fields.StringField;
@@ -15,23 +21,24 @@ interface PostDiscordRegionBehaviorType
             PostDiscordTypeSchema,
             RegionBehavior | null
         >,
-        ModelPropsFromSchema<PostDiscordTypeSchema> {}
+        fields.ModelPropsFromSchema<PostDiscordTypeSchema> {}
 
 class PostDiscordRegionBehaviorType extends foundry.data.regionBehaviors
     .RegionBehaviorType<PostDiscordTypeSchema, RegionBehavior | null> {
     static override LOCALIZATION_PREFIXES = ["PostDiscordRegionBehaviorType"];
 
-    static override defineSchema(): fields.DataSchema {
+    static override defineSchema(): DataSchema {
         const fields = foundry.data.fields;
         return {
             events: this._createEventsField({
                 events: [
                     CONST.REGION_EVENTS.TOKEN_ENTER,
                     CONST.REGION_EVENTS.TOKEN_EXIT,
-                    CONST.REGION_EVENTS.TOKEN_MOVE,
                     CONST.REGION_EVENTS.TOKEN_MOVE_IN,
                     CONST.REGION_EVENTS.TOKEN_MOVE_OUT,
-                    CONST.REGION_EVENTS.TOKEN_PRE_MOVE,
+                    CONST.REGION_EVENTS.TOKEN_MOVE_WITHIN,
+                    CONST.REGION_EVENTS.TOKEN_ANIMATE_IN,
+                    CONST.REGION_EVENTS.TOKEN_ANIMATE_OUT,
                     CONST.REGION_EVENTS.TOKEN_TURN_START,
                     CONST.REGION_EVENTS.TOKEN_TURN_END,
                     CONST.REGION_EVENTS.TOKEN_ROUND_START,
@@ -88,11 +95,10 @@ export function regionsInit(): void {
         "pbd-tools.postDiscord": "TYPES.RegionBehavior.pbd-tools.postDiscord",
     });
 
-    DocumentSheetConfig.registerSheet(
+    (foundry.applications.apps.DocumentSheetConfig.registerSheet as any)(
         RegionBehavior,
-        "pbd-tools.postDiscord",
-        // @ts-expect-error missing RegionBehaviorConfig type
-        foundry.applications.sheets.RegionBehaviorConfig,
+        "pbd-tools",
+        (foundry.applications.sheets as any).RegionBehaviorConfig,
         {
             types: ["pbd-tools.postDiscord"],
             makeDefault: true,

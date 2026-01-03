@@ -1,4 +1,13 @@
+import type { SettingRegistration } from "foundry-pf2e/foundry/client/helpers/client-settings.mjs";
 import { MODULE_NAME } from "../constants.ts";
+import type {
+    FormApplicationData,
+    FormApplicationOptions,
+} from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
+
+// Runtime globals available in Foundry
+// @ts-ignore - FormApplication is available globally in Foundry
+declare const FormApplication: any;
 
 export type PartialSettingsData = Omit<SettingRegistration, "scope" | "config">;
 
@@ -12,10 +21,11 @@ export interface MenuTemplateData extends FormApplicationData {
 }
 
 /** An adjusted copy of the settings menu from core pf2e meant for the module */
+// @ts-ignore - Extending from runtime global FormApplication
 export class SettingsMenuPbdTools extends FormApplication {
     static readonly namespace: string;
 
-    static override get defaultOptions(): FormApplicationOptions {
+    static get defaultOptions(): FormApplicationOptions {
         const options = super.defaultOptions;
         return fu.mergeObject(options, {
             title: `${MODULE_NAME}.Setting.${this.namespace}.Name`,
@@ -61,13 +71,14 @@ export class SettingsMenuPbdTools extends FormApplication {
             label: `${MODULE_NAME}.Setting.${this.namespace}.Label`,
             hint: `${MODULE_NAME}.Setting.${this.namespace}.Hint`,
             icon: icon,
+            // @ts-ignore - Runtime registration works correctly
             type: this,
             restricted: restricted,
         });
         this.registerSettings();
     }
 
-    override getData(): MenuTemplateData {
+    getData(): MenuTemplateData {
         const settings = (this.constructor as typeof SettingsMenuPbdTools)
             .settings;
         const templateData: SettingsTemplateData[] = Object.entries(
@@ -91,7 +102,7 @@ export class SettingsMenuPbdTools extends FormApplication {
         });
     }
 
-    protected override async _updateObject(
+    protected async _updateObject(
         _event: Event,
         data: Record<string, unknown>,
     ): Promise<void> {

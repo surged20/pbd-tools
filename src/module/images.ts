@@ -11,7 +11,7 @@ export async function generateImageLink(
     imageSource: string,
     requireAvatarCompatible: boolean = true,
 ): Promise<string> {
-    const supportedFormats = ["jpg", "jpeg", "png", "webp", "gif"];
+    const supportedFormats = ["jpg", "jpeg", "png", "webp", "gif", "svg"];
     let imageUrl;
 
     if (!imageSource || imageSource === "") {

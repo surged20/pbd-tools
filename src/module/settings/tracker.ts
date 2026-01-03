@@ -1,6 +1,8 @@
 import { MODULE_NAME } from "../constants.ts";
 import { SettingsMenuPbdTools } from "./menu.ts";
 import { getActiveChannels } from "../helpers.ts";
+import type { SettingRegistration } from "foundry-pf2e/foundry/client/helpers/client-settings.mjs";
+import type { FormApplicationOptions } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 
 export class TrackerSettings extends SettingsMenuPbdTools {
     static override namespace = "TrackerSettings";

@@ -1,5 +1,14 @@
-import { ActorPF2e } from "foundry-pf2e";
+import type { ActorPF2e } from "foundry-pf2e";
 import { MODULE_NAME } from "../constants.ts";
+import type {
+    FormApplicationData,
+    FormApplicationOptions,
+} from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
+
+// Runtime globals available in Foundry
+// @ts-ignore - FormApplication is available globally in Foundry
+declare const FormApplication: any;
+import type { AppV1RenderOptions } from "foundry-pf2e/foundry/client/appv1/api/application-v1.mjs";
 
 interface UserMentionConfigData extends FormApplicationData {
     pcs: ActorPF2e[];
@@ -11,8 +20,9 @@ interface UserMentionConfigFormData extends FormData {
     userId: string;
 }
 
+// @ts-ignore - Extending from runtime global FormApplication
 export class UserMentionConfig extends FormApplication {
-    static override get defaultOptions(): FormApplicationOptions {
+    static get defaultOptions(): FormApplicationOptions {
         return foundry.utils.mergeObject(super.defaultOptions, {
             title: game.i18n.localize(`${MODULE_NAME}.UserMentionConfig.Title`),
             template: "modules/pbd-tools/templates/user-mention-config.hbs",
@@ -40,7 +50,7 @@ export class UserMentionConfig extends FormApplication {
         });
     }
 
-    override getData(): UserMentionConfigData {
+    getData(): UserMentionConfigData {
         const pcs: ActorPF2e[] = game.actors.filter(
             (actor) => actor.type === "character",
         );
@@ -53,7 +63,7 @@ export class UserMentionConfig extends FormApplication {
         return { pcs, userMap } as UserMentionConfigData;
     }
 
-    override activateListeners(html: JQuery): void {
+    activateListeners(html: JQuery): void {
         super.activateListeners(html);
 
         html.find(".delete-entry").click(async (event) => {
@@ -99,9 +109,9 @@ export class UserMentionConfig extends FormApplication {
         this.render();
     }
 
-    override async _renderInner(
+    async _renderInner(
         data: UserMentionConfigData,
-        options: RenderOptions,
+        options: AppV1RenderOptions,
     ): Promise<JQuery> {
         const inner = await super._renderInner(data, options);
 

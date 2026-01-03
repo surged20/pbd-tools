@@ -1,5 +1,9 @@
+import type { FormApplicationOptions } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 import { MODULE_NAME } from "../constants.ts";
 import { SettingsMenuPbdTools } from "./menu.ts";
+import type { SettingRegistration } from "foundry-pf2e/foundry/client/helpers/client-settings.mjs";
+// Runtime globals
+declare const SettingsConfig: any;
 
 export class DiscordWebhookSettings extends SettingsMenuPbdTools {
     static override namespace = "DiscordWebhookSettings";

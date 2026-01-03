@@ -27,6 +27,7 @@ export function registerSettings(): void {
             `${MODULE_NAME}.Setting.UserMentionConfig.Hint`,
         ),
         icon: "fa-brands fa-discord",
+        // @ts-ignore - Runtime registration works correctly
         type: UserMentionConfig,
         restricted: true,
     });
