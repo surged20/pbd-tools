@@ -15,25 +15,87 @@ In Foundry setup, click on the Install Module button and put the following path 
 
 ## Features
 
-### General
+### Discord Integration
 
-- Send journal pages and image popouts to IC, OOC, or GM channels
-- Send highlighted text in a journal page to IC, OOC, or GM channels
+- **Journal Sharing**: Send journal pages to IC, OOC, or GM Discord channels via context menu
+- **Text Selection**: Highlight text in a journal page and post selected text to any channel
+- **Image Popouts**: Dropdown buttons on image popouts to post images directly to Discord
+- **HTML to Markdown**: Journal content automatically converted to Discord-compatible Markdown
+- **UUID Resolution**: Embedded content links resolved to proper text references
 
-### PF2e only
+### Combat Tracker (PF2e)
 
-- Send Foundry combat tracker state to IC channel with optional user mentions
-- Send RPGSage PC/NPC create, update, and stats commands to GM channel
+- **Automatic Updates**: Post combat tracker state to Discord when turns change
+- **Display Modes**: Compact, Wide, or Custom column layouts
+- **Configurable Content**:
+  - Initiative order with turn marker
+  - AC display (hidden, value, or alias)
+  - HP display (hidden, PC only, or PC + opposition damage)
+  - Hero points, conditions/effects, NPC aliases
+- **User Mentions**: Optionally mention Discord users when their character's turn begins
+- **Begin/End Messages**: Optional messages when combat starts and ends
 
-## Limitations
+### NPC/Hazard Export (PF2e)
 
-The module has a hardcoded assumption of a standard PbD channel configuration with IC, OOC, and GM channels.
+- **TSV Export**: Export NPCs and complex hazards to RPG Sage-compatible TSV format
+- **Multiple Export Sources**:
+  - Individual actors via context menu or sheet button
+  - All NPCs in an encounter via combat tracker
+  - All NPCs in a folder via folder context menu
+  - All NPCs in a scene via scene context menu
+- **Alias System**: Auto-generated aliases stored persistently, editable before export
+- **Spoiler Tags**: Optionally wrap stat values in Discord spoiler tags
+- **Server or Download**: Upload to server with chat import command, or download locally
+
+### PC Export (PF2e)
+
+- **PathBuilder JSON**: Export player characters to PathBuilder 2e format
+- **Import Commands**: Chat message with RPG Sage import/reimport commands
+- **Discord Notification**: Optional automatic post to Discord with import link
+
+### NPC Statblock (PF2e)
+
+- **Statblock Posting**: Send formatted NPC statblocks to GM Discord channel
+- **Full Details**: Name, level, traits, AC, HP, saves, speeds, attributes, skills, attacks, actions, spells
+- **Influence Statblock**: Post influence tracking data (requires pf2e-bestiary-tracking module)
+- **Customizable Colors**: Configure embed colors for statblocks
+
+### Region Behaviors
+
+- **Post to Discord**: Create regions that post custom messages to Discord when triggered
+- **Trigger Events**: Token enter/exit, move, turn start/end, round start/end
+- **Options**: Once-only trigger, pause game on trigger, channel selection
 
 ## Configuration
 
-- Create webhooks for the IC, OOC, and GM channels. Copy the webhook URL from Discord to the appropriate channel settings.
-- Optionally set an alternative username and avatar image for each channel to be used for posts.
-- Optionally set up PC to Discord User ID mapping to enable mentions on combat tracker updates
+### Discord Webhooks
+Create webhooks for the IC, OOC, and GM channels in Discord. Copy the webhook URL to the appropriate channel settings in the module configuration.
+
+Optional per-channel settings:
+- Custom username for posts
+- Custom avatar image for posts
+
+### Combat Tracker Mentions
+Map player characters to Discord user IDs to enable @mentions when their turn begins.
+
+### Export Settings
+- Server upload vs local download
+- Automatic Discord posting
+- Alias abbreviation length and mode
+- Spoiler tag wrapping
+
+### Tracker Settings
+- Enable/disable tracker updates
+- Output channel selection
+- Display mode (Compact/Wide/Custom)
+- Column visibility and custom headers
+- Turn marker symbol
+
+## Limitations
+
+- Assumes a standard PbD channel configuration with IC, OOC, and GM channels
+- PF2e-specific features require the PF2e game system
+- Influence statblocks require the pf2e-bestiary-tracking module
 
 ## Acknowledgements
 
