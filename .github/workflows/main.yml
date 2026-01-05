@@ -9,10 +9,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Use Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
           node-version: '18.x'
 
@@ -24,7 +24,11 @@ jobs:
 
       - name: Extract tag version number
         id: get_version
-        uses: battila7/get-version-action@v2
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION_WITHOUT_V=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version-without-v=$VERSION_WITHOUT_V" >> $GITHUB_OUTPUT
 
       # Substitute tag version in manifest
       - name: Substitute Manifest and Download Links For Versioned Ones
@@ -58,7 +62,7 @@ jobs:
         with:
           allowUpdates: true # set this to false if you want to prevent updating existing releases
           name: ${{ steps.get_version.outputs.version-without-v }}
-          body: ${{ steps.get_tag_message.content }}
+          body: ${{ steps.get_tag_message.outputs.content }}
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
