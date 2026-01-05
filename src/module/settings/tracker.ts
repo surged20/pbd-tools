@@ -1,7 +1,9 @@
 import { MODULE_NAME } from "../constants.ts";
-import { SettingsMenuPbdTools } from "./menu.ts";
+import {
+    SettingsMenuPbdTools,
+    type ExtendedSettingRegistration,
+} from "./menu.ts";
 import { getActiveChannels } from "../helpers.ts";
-import type { SettingRegistration } from "foundry-pf2e/foundry/client/helpers/client-settings.mjs";
 import type { FormApplicationOptions } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 
 export class TrackerSettings extends SettingsMenuPbdTools {
@@ -11,7 +13,10 @@ export class TrackerSettings extends SettingsMenuPbdTools {
         return fu.mergeObject(super.defaultOptions, { height: "fit-content" });
     }
 
-    public static override get settings(): Record<string, SettingRegistration> {
+    public static override get settings(): Record<
+        string,
+        ExtendedSettingRegistration
+    > {
         const activeChannels = getActiveChannels();
         return {
             "enable-discord-tracker": {

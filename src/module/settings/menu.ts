@@ -9,7 +9,24 @@ import type {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const FormApplication: any;
 
-export type PartialSettingsData = Omit<SettingRegistration, "scope" | "config">;
+// Extended setting registration that includes filePicker (Foundry feature not in types)
+export type ExtendedSettingRegistration = SettingRegistration & {
+    filePicker?:
+        | "image"
+        | "audio"
+        | "video"
+        | "imagevideo"
+        | "folder"
+        | "font"
+        | "graphics"
+        | "text"
+        | "any";
+};
+
+export type PartialSettingsData = Omit<
+    ExtendedSettingRegistration,
+    "scope" | "config"
+>;
 
 interface SettingsTemplateData extends PartialSettingsData {
     key: string;

@@ -1,6 +1,8 @@
 // foundry-pf2e types are available globally
 import type * as fields from "foundry-pf2e/foundry/common/data/fields.d.mts";
-import type { DataSchema } from "foundry-pf2e/foundry/common/data/fields.d.mts";
+
+// DataSchema type for defineSchema return value
+type DataSchema = Record<string, fields.DataField>;
 import { Channel } from "./constants.ts";
 import { postDiscord } from "./discord.ts";
 import { getActiveChannels } from "./helpers.ts";

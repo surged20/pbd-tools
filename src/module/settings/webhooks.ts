@@ -1,7 +1,9 @@
 import type { FormApplicationOptions } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 import { MODULE_NAME } from "../constants.ts";
-import { SettingsMenuPbdTools } from "./menu.ts";
-import type { SettingRegistration } from "foundry-pf2e/foundry/client/helpers/client-settings.mjs";
+import {
+    SettingsMenuPbdTools,
+    type ExtendedSettingRegistration,
+} from "./menu.ts";
 // Runtime globals
 declare const SettingsConfig: {
     reloadConfirm: (options?: { world?: boolean }) => void;
@@ -22,7 +24,10 @@ export class DiscordWebhookSettings extends SettingsMenuPbdTools {
         SettingsConfig.reloadConfirm({ world: true });
     }
 
-    public static override get settings(): Record<string, SettingRegistration> {
+    public static override get settings(): Record<
+        string,
+        ExtendedSettingRegistration
+    > {
         return {
             "gm-url": {
                 name: `${MODULE_NAME}.Setting.GmUrl.Name`,
