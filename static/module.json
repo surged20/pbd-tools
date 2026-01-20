@@ -11,10 +11,10 @@
         "email": "surged20@gmail.com"
       }
     ],
-    "minimumCoreVersion": "12",
+    "minimumCoreVersion": "13",
     "compatibility": {
-      "minimum": "12",
-      "verified": "12.330"
+      "minimum": "13",
+      "verified": "13.351"
     },
     "esmodules": ["./vendor.mjs", "./pbd-tools.mjs"],
     "styles": ["./pbd-tools.css"],
