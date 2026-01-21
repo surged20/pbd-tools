@@ -19,4 +19,3 @@ coverage
 foundryconfig.json
 tags*
 yarn.lock
-package-lock.json
