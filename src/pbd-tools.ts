@@ -61,10 +61,20 @@ Hooks.on("init", () => {
     }
 });
 
-Hooks.on("ready", () => {
+Hooks.on("ready", async () => {
     if (!game.user.isGM) return;
 
     initContextMenu();
+
+    // Validate bot webhooks on startup
+    try {
+        const { BotSettings } = await import(
+            "./module/settings/bot-settings.ts"
+        );
+        await BotSettings.validateWebhooks();
+    } catch (error) {
+        console.warn("[PBD-Tools] Bot webhook validation failed:", error);
+    }
 });
 
 // Hook to store auto-generated aliases on actor creation (NPCs, Hazards, and PCs)

@@ -13,7 +13,8 @@
     "watch": "vite build --watch --mode development",
     "hot": "vite serve",
     "lint": "eslint ./src --ext .ts",
-    "lint:fix": "eslint ./src --ext .ts --fix"
+    "lint:fix": "eslint ./src --ext .ts --fix",
+    "proxy": "node scripts/discord-proxy.mjs"
   },
   "author": "Surge <surged20@gmail.com>",
   "license": "MIT",
@@ -35,6 +36,7 @@
     "@types/tooltipster": "0.0.35",
     "@typescript-eslint/eslint-plugin": "^7.13.1",
     "@typescript-eslint/parser": "^7.13.1",
+    "discord-api-types": "^0.38.38",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jest": "^28.6.0",

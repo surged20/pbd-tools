@@ -14,6 +14,22 @@ export const Channels = {
 
 export const DEFAULT_AVATAR = "icons/vtt-512.png";
 
+export const DISCORD_API_BASE = "https://discord.com/api/v10";
+
+export const DEFAULT_PROXY_URL = "http://127.0.0.1:3001";
+
+export const RPGSAGE_APP_ID_DEFAULT = "644942473315090434";
+
+export interface GameChannelConfig {
+    channelId: string;
+    channelName: string;
+    tag: string;
+    webhookId: string;
+    webhookToken: string;
+    gmUsername: string;
+    gmAvatar: string;
+}
+
 export function isPF2e(): boolean {
     return game.system.id === "pf2e";
 }

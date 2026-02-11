@@ -24,10 +24,83 @@
                 "Label": "Configure Mentions",
                 "Hint": "Add Player Character to Discord User ID Mentions"
             },
+            "BotSettings": {
+                "Name": "Discord Bot",
+                "Label": "Configure Bot",
+                "Hint": "Manage Discord bot integration and channel webhooks",
+                "Enabled": {
+                    "Name": "Enable Bot Mode",
+                    "Hint": "Use a Discord bot to manage webhooks automatically. Takes precedence over manual webhook URLs when enabled."
+                },
+                "Token": {
+                    "Name": "Bot Token",
+                    "Hint": "Your Discord bot token. Keep this secret."
+                },
+                "ProxyUrl": {
+                    "Name": "CORS Proxy URL",
+                    "Hint": "Local proxy for Discord API calls during bot setup. Run 'npm run proxy' to start it. Only needed for Test Connection, Discover Channels, and adding channels — not for sending messages."
+                },
+                "RpgSageAppId": {
+                    "Name": "RPGSage Application ID",
+                    "Hint": "The Discord application ID for RPGSage. Pre-filled with the official RPGSage ID. Only change this if you are self-hosting RPGSage."
+                },
+                "GuildId": {
+                    "Name": "Guild ID",
+                    "Hint": "Auto-detected Discord server (guild) ID."
+                },
+                "GuildName": {
+                    "Name": "Discord Server",
+                    "Hint": "The detected Discord server name."
+                },
+                "DiscoveredChannels": {
+                    "Name": "Discovered Channels",
+                    "Hint": "Cached list of channels discovered via RPGSage webhooks."
+                },
+                "GameChannels": {
+                    "Name": "Game Channels",
+                    "Hint": "Configured game channels with managed webhooks."
+                },
+                "Instructions": {
+                    "Title": "Bot Setup Instructions",
+                    "Step1": "Go to the <a href=\"https://discord.com/developers/applications\" target=\"_blank\">Discord Developer Portal</a> and click <strong>New Application</strong>. Give it a name (e.g. \"PBD-Tools\") and click Create.",
+                    "Step2": "In the left sidebar, click <strong>Bot</strong>. Click <strong>Reset Token</strong>, confirm, then <strong>copy the token</strong>. You will not be able to see it again. No Privileged Gateway Intents are needed.",
+                    "Step3": "In the left sidebar, click <strong>OAuth2</strong>. Under <em>OAuth2 URL Generator</em>, check the <strong>bot</strong> scope. Under <em>Bot Permissions</em>, check <strong>Manage Webhooks</strong> and <strong>View Channels</strong> (so the bot can resolve channel names). Copy the generated URL at the bottom, open it in your browser, select your Discord server, and authorize.",
+                    "Step4": "In a terminal, run <code>npm run proxy</code> to start the local CORS proxy. This is needed for bot setup (Test Connection, Discover Channels, adding channels). It is <em>not</em> needed after setup — message sending goes directly to Discord.",
+                    "Step5": "Paste the bot token below and click <strong>Test Connection</strong>. Your Discord server name should appear. Then click <strong>Discover Channels</strong> to find channels where RPGSage has webhooks.",
+                    "Step6": "Select a channel, assign it a tag (IC/OOC/GM), and click <strong>+</strong> to add it. Configure the GM persona name and avatar for each channel.",
+                    "Step7": "Check <strong>Enable Bot Mode</strong> and click <strong>Save</strong>. You can stop the proxy."
+                },
+                "SectionConfig": "Bot Configuration",
+                "SectionDiscovery": "Channel Discovery",
+                "SectionChannels": "Configured Channels",
+                "TestConnection": "Test Connection",
+                "DiscoverChannels": "Discover Channels",
+                "AddChannelLabel": "Add Channel",
+                "SelectChannel": "-- Select a channel --",
+                "GmUsername": "GM/Narrator Name",
+                "GmAvatar": "GM/Narrator Avatar",
+                "RemoveChannel": "Remove channel",
+                "NoChannelsConfigured": "No channels configured. Use Discover Channels above to find RPGSage channels, then add them here.",
+                "NoToken": "Please enter a bot token first.",
+                "NoGuilds": "Bot is not a member of any Discord servers.",
+                "Connected": "Connected to server: {name}",
+                "ConnectedMultiGuild": "Connected to server: {name} ({count} servers available, using first)",
+                "ConnectionFailed": "Failed to connect. Check your bot token.",
+                "TestFirst": "Please test the connection first to detect your Discord server.",
+                "NoAppId": "Please enter the RPGSage application ID.",
+                "DiscoveredCount": "Discovered {count} channel(s) with RPGSage webhooks.",
+                "DiscoveryFailed": "Channel discovery failed. Check the bot token and RPGSage app ID.",
+                "SelectChannelAndTag": "Please select a channel and tag.",
+                "ChannelAlreadyAdded": "This channel is already configured.",
+                "ChannelAdded": "Added #{name} as {tag} channel.",
+                "ChannelRemoved": "Removed #{name} channel configuration.",
+                "WebhookCreateFailed": "Failed to create webhook. Check bot permissions (Manage Webhooks).",
+                "WebhooksCleaned": "All managed webhooks have been removed from Discord."
+            },
             "DiscordWebhookSettings": {
-                "Name": "Discord Webhooks",
+                "Name": "Discord Webhooks (Manual)",
                 "Label": "Configure Webhooks",
-                "Hint": "Add Discord webhooks, names, and avatars"
+                "Hint": "Manual webhook URL fallback. Used when Bot Mode is disabled."
             },
             "ExportSettings": {
                 "Name": "Exports",

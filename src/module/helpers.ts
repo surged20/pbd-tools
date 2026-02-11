@@ -1,6 +1,12 @@
 import TurndownService from "turndown";
 
-import { MODULE_NAME, Channel, Channels } from "./constants.ts";
+import {
+    MODULE_NAME,
+    DISCORD_API_BASE,
+    Channel,
+    Channels,
+    type GameChannelConfig,
+} from "./constants.ts";
 import type { ActorPF2e } from "foundry-pf2e";
 
 const SUPERSCRIPTS = {
@@ -90,7 +96,34 @@ export function isComplexHazardOrNpc(actor: ActorPF2e): boolean {
     );
 }
 
+export function isBotModeEnabled(): boolean {
+    return game.settings.get(MODULE_NAME, "bot-enabled") as boolean;
+}
+
+export function getGameChannels(): GameChannelConfig[] {
+    try {
+        return JSON.parse(
+            game.settings.get(MODULE_NAME, "bot-game-channels") as string,
+        ) as GameChannelConfig[];
+    } catch {
+        return [];
+    }
+}
+
+export function getGameChannelByTag(
+    tag: string,
+): GameChannelConfig | undefined {
+    return getGameChannels().find((gc) => gc.tag === tag);
+}
+
 export function isChannelActive(channel: Channel): boolean {
+    if (isBotModeEnabled()) {
+        const gc = getGameChannelByTag(channel);
+        return (
+            gc !== undefined && gc.webhookId !== "" && gc.webhookToken !== ""
+        );
+    }
+
     let url;
     switch (channel) {
         case Channel.IC:
@@ -107,6 +140,21 @@ export function isChannelActive(channel: Channel): boolean {
 }
 
 export function getActiveChannels(): Record<string, string> {
+    if (isBotModeEnabled()) {
+        const channels: Record<string, string> = {};
+        for (const gc of getGameChannels()) {
+            if (gc.webhookId && gc.webhookToken) {
+                const tag = gc.tag as keyof typeof Channels;
+                if (tag in Channels) {
+                    channels[gc.tag] = game.i18n.localize(Channels[tag]);
+                } else {
+                    channels[gc.tag] = gc.tag.toUpperCase();
+                }
+            }
+        }
+        return channels;
+    }
+
     const channels = {};
     for (const key in Channels) {
         if (isChannelActive(key as Channel)) {
@@ -117,6 +165,14 @@ export function getActiveChannels(): Record<string, string> {
 }
 
 export function getChannelWebhookUrl(channel: Channel): string {
+    if (isBotModeEnabled()) {
+        const gc = getGameChannelByTag(channel);
+        if (gc) {
+            return `${DISCORD_API_BASE}/webhooks/${gc.webhookId}/${gc.webhookToken}`;
+        }
+        return "";
+    }
+
     switch (channel) {
         case Channel.IC:
             return game.settings.get(MODULE_NAME, "ic-url") as string;
@@ -128,6 +184,12 @@ export function getChannelWebhookUrl(channel: Channel): string {
 }
 
 export function getChannelUsername(channel: Channel): string {
+    if (isBotModeEnabled()) {
+        const gc = getGameChannelByTag(channel);
+        if (gc) return gc.gmUsername;
+        return "Gamemaster";
+    }
+
     switch (channel) {
         case Channel.IC:
             return game.settings.get(MODULE_NAME, "ic-username") as string;
@@ -139,6 +201,12 @@ export function getChannelUsername(channel: Channel): string {
 }
 
 export function getChannelAvatar(channel: Channel): string {
+    if (isBotModeEnabled()) {
+        const gc = getGameChannelByTag(channel);
+        if (gc) return gc.gmAvatar;
+        return "icons/vtt-512.png";
+    }
+
     switch (channel) {
         case Channel.IC:
             return game.settings.get(MODULE_NAME, "ic-avatar") as string;

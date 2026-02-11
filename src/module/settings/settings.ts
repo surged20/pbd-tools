@@ -1,4 +1,5 @@
 import { MODULE_NAME } from "../constants.ts";
+import { BotSettings } from "./bot-settings.ts";
 import { DiscordWebhookSettings } from "./webhooks.ts";
 import { DebugSettings } from "./debug.ts";
 import { ExportSettings } from "./export.ts";
@@ -10,6 +11,8 @@ import { UserMentionConfig } from "./user-mention-config.ts";
  * Initializes settings. Must be called only once.
  */
 export function registerSettings(): void {
+    BotSettings.registerSettingsAndCreateMenu("fas fa-robot");
+
     DiscordWebhookSettings.registerSettingsAndCreateMenu(
         "fa-brands fa-discord",
     );
