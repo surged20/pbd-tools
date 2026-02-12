@@ -479,8 +479,8 @@ export async function showCreatePostDialog(
         let desc = await convertToMarkdownAsync(data.spellDescription);
         // Strip horizontal rules (no Discord equivalent) and format as subtext
         desc = desc
-            .replace(/^-{3,}$/gm, "")
-            .replace(/\n{3,}/g, "\n\n")
+            .replace(/^[\s*-]{3,}$/gm, "")
+            .replace(/\n{2,}/g, "\n")
             .trim();
         data.spellDescription = desc
             .split("\n")
