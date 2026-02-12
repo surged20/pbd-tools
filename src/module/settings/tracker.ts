@@ -3,7 +3,7 @@ import {
     SettingsMenuPbdTools,
     type ExtendedSettingRegistration,
 } from "./menu.ts";
-import { getActiveChannels } from "../helpers.ts";
+import { getActiveChannelTargets } from "../helpers.ts";
 import type { FormApplicationOptions } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 
 export class TrackerSettings extends SettingsMenuPbdTools {
@@ -17,7 +17,7 @@ export class TrackerSettings extends SettingsMenuPbdTools {
         string,
         ExtendedSettingRegistration
     > {
-        const activeChannels = getActiveChannels();
+        const activeChannels = getActiveChannelTargets();
         return {
             "enable-discord-tracker": {
                 name: `${MODULE_NAME}.Setting.EnableDiscordTracker.Name`,
@@ -37,7 +37,7 @@ export class TrackerSettings extends SettingsMenuPbdTools {
                 config: true,
                 type: String,
                 choices: activeChannels,
-                default: Object.keys(activeChannels)[0],
+                default: Object.keys(activeChannels)[0] ?? "",
             },
             "tracker-mode": {
                 name: `${MODULE_NAME}.Setting.TrackerMode.Name`,

@@ -2,8 +2,12 @@ import type {
     APIGuild,
     APIChannel,
     APIWebhook,
+    APIEmoji,
+    APIGuildMember,
+    APIThreadChannel,
     RESTPostAPIChannelWebhookJSONBody,
     RESTPostAPIWebhookWithTokenJSONBody,
+    RESTGetAPIGuildThreadsResult,
 } from "discord-api-types/v10";
 import {
     DISCORD_API_BASE,
@@ -11,7 +15,7 @@ import {
     MODULE_NAME,
 } from "./constants.ts";
 
-export type { APIGuild, APIChannel, APIWebhook };
+export type { APIGuild, APIChannel, APIWebhook, APIEmoji, APIGuildMember };
 
 export interface ManagedWebhook {
     id: string;
@@ -23,6 +27,8 @@ export interface DiscoveredChannel {
     id: string;
     name: string;
     type: number;
+    parentId?: string;
+    parentName?: string;
 }
 
 /**
@@ -108,6 +114,17 @@ export async function getChannel(
     );
 }
 
+export async function getGuildEmojis(
+    token: string,
+    guildId: string,
+): Promise<APIEmoji[]> {
+    return discordApiRequest<APIEmoji[]>(
+        token,
+        "GET",
+        `/guilds/${guildId}/emojis`,
+    );
+}
+
 export async function getGuildChannels(
     token: string,
     guildId: string,
@@ -117,6 +134,29 @@ export async function getGuildChannels(
         "GET",
         `/guilds/${guildId}/channels`,
     );
+}
+
+export async function getGuildMembers(
+    token: string,
+    guildId: string,
+): Promise<APIGuildMember[]> {
+    return discordApiRequest<APIGuildMember[]>(
+        token,
+        "GET",
+        `/guilds/${guildId}/members?limit=1000`,
+    );
+}
+
+export async function getGuildActiveThreads(
+    token: string,
+    guildId: string,
+): Promise<APIThreadChannel[]> {
+    const result = await discordApiRequest<RESTGetAPIGuildThreadsResult>(
+        token,
+        "GET",
+        `/guilds/${guildId}/threads/active`,
+    );
+    return result.threads as APIThreadChannel[];
 }
 
 export async function createWebhook(
@@ -144,8 +184,10 @@ export async function executeWebhook(
     webhookId: string,
     webhookToken: string,
     payload: RESTPostAPIWebhookWithTokenJSONBody,
+    threadId?: string,
 ): Promise<void> {
-    const url = `${DISCORD_API_BASE}/webhooks/${webhookId}/${webhookToken}?wait=true`;
+    let url = `${DISCORD_API_BASE}/webhooks/${webhookId}/${webhookToken}?wait=true`;
+    if (threadId) url += `&thread_id=${threadId}`;
     const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,8 +206,10 @@ export async function executeWebhookFormData(
     webhookId: string,
     webhookToken: string,
     formData: FormData,
+    threadId?: string,
 ): Promise<Response> {
-    const url = `${DISCORD_API_BASE}/webhooks/${webhookId}/${webhookToken}?wait=true`;
+    let url = `${DISCORD_API_BASE}/webhooks/${webhookId}/${webhookToken}?wait=true`;
+    if (threadId) url += `&thread_id=${threadId}`;
     const response = await fetch(url, {
         method: "POST",
         body: formData,
@@ -182,6 +226,24 @@ export async function getWebhook(
         "GET",
         `/webhooks/${webhookId}`,
     );
+}
+
+/**
+ * Check if a webhook is still valid using the unauthenticated endpoint.
+ * This does NOT require the CORS proxy since no Authorization header is sent.
+ * Returns true if the webhook responds 200, false otherwise.
+ */
+export async function checkWebhookValid(
+    webhookId: string,
+    webhookToken: string,
+): Promise<boolean> {
+    try {
+        const url = `${DISCORD_API_BASE}/webhooks/${webhookId}/${webhookToken}`;
+        const response = await fetch(url, { method: "GET" });
+        return response.ok;
+    } catch {
+        return false;
+    }
 }
 
 export async function discoverChannels(
@@ -215,7 +277,7 @@ export async function discoverChannels(
         );
     }
 
-    return uniqueChannelIds.map((channelId) => {
+    const channels: DiscoveredChannel[] = uniqueChannelIds.map((channelId) => {
         const info = nameMap.get(channelId);
         return {
             id: channelId,
@@ -223,4 +285,29 @@ export async function discoverChannels(
             type: info?.type ?? 0,
         };
     });
+
+    // Also discover active threads whose parent is a discovered channel
+    try {
+        const threads = await getGuildActiveThreads(token, guildId);
+        const discoveredChannelIds = new Set(uniqueChannelIds);
+        for (const thread of threads) {
+            if (
+                thread.parent_id &&
+                discoveredChannelIds.has(thread.parent_id)
+            ) {
+                const parentInfo = nameMap.get(thread.parent_id);
+                channels.push({
+                    id: thread.id,
+                    name: thread.name ?? thread.id,
+                    type: thread.type,
+                    parentId: thread.parent_id,
+                    parentName: parentInfo?.name ?? thread.parent_id,
+                });
+            }
+        }
+    } catch (error) {
+        console.warn("[PBD-Tools] Could not fetch active threads:", error);
+    }
+
+    return channels;
 }

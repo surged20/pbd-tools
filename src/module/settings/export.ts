@@ -3,7 +3,7 @@ import {
     SettingsMenuPbdTools,
     type ExtendedSettingRegistration,
 } from "./menu.ts";
-import { getActiveChannels } from "../helpers.ts";
+import { getActiveChannelTargets } from "../helpers.ts";
 import type { FormApplicationOptions } from "foundry-pf2e/foundry/client/appv1/api/form-application-v1.mjs";
 // Runtime globals
 declare const SettingsConfig: { reloadConfirm: () => void };
@@ -19,7 +19,7 @@ export class ExportSettings extends SettingsMenuPbdTools {
         string,
         ExtendedSettingRegistration
     > {
-        const activeChannels = getActiveChannels();
+        const activeChannels = getActiveChannelTargets();
         return {
             "post-pc-to-discord": {
                 name: `${MODULE_NAME}.Setting.PostPcToDiscord.Name`,
@@ -36,7 +36,16 @@ export class ExportSettings extends SettingsMenuPbdTools {
                 config: true,
                 type: String,
                 choices: activeChannels,
-                default: Object.keys(activeChannels)[0],
+                default: Object.keys(activeChannels)[0] ?? "",
+            },
+            "gm-output-channel": {
+                name: `${MODULE_NAME}.Setting.GmOutputChannel.Name`,
+                hint: `${MODULE_NAME}.Setting.GmOutputChannel.Hint`,
+                scope: "world",
+                config: true,
+                type: String,
+                choices: activeChannels,
+                default: Object.keys(activeChannels)[0] ?? "",
             },
             "npc-export-server": {
                 name: `${MODULE_NAME}.Setting.NpcExportServer.Name`,

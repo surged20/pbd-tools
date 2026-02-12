@@ -1,12 +1,16 @@
 import type { ActorPF2e, Size } from "foundry-pf2e";
 
-import { Channel, DiscordEmbed, MODULE_NAME } from "./constants.ts";
+import {
+    MODULE_NAME,
+    type ChannelTargetId,
+    type DiscordEmbed,
+} from "./constants.ts";
 import { createDiscordFormData, postDiscordMessage } from "./discord.ts";
 import {
     convertToMarkdown,
-    getChannelAvatar,
-    getChannelUsername,
-    isChannelActive,
+    getChannelTargetAvatar,
+    getChannelTargetUsername,
+    isChannelTargetActive,
 } from "./helpers.ts";
 import { generateImageLink } from "./images.ts";
 import {
@@ -226,7 +230,11 @@ ${getInfluenceThresholds(page)}\
 export async function postInfluenceStatblock(
     page: JournalEntryPage<JournalEntry>,
 ): Promise<void> {
-    if (!isChannelActive(Channel.GM)) return;
+    const gmChannel = game.settings.get(
+        MODULE_NAME,
+        "gm-output-channel",
+    ) as ChannelTargetId;
+    if (!isChannelTargetActive(gmChannel)) return;
 
     try {
         const embed = await createInfluenceStatblock(page);
@@ -242,14 +250,14 @@ export async function postInfluenceStatblock(
             return;
         }
 
-        const username = getChannelUsername(Channel.GM);
+        const username = getChannelTargetUsername(gmChannel);
         const avatarLink = await generateImageLink(
-            getChannelAvatar(Channel.GM),
+            getChannelTargetAvatar(gmChannel),
         );
         const formData = createDiscordFormData(username, avatarLink, "", [
             embed,
         ]);
-        await postDiscordMessage(Channel.GM, formData);
+        await postDiscordMessage(gmChannel, formData);
         ui.notifications.info(
             page.name + game.i18n.localize("pbd-tools.Statblock.SentInfluence"),
         );

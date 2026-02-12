@@ -1,6 +1,5 @@
 import { MODULE_NAME } from "../constants.ts";
-import { BotSettings } from "./bot-settings.ts";
-import { DiscordWebhookSettings } from "./webhooks.ts";
+import { GameChannelSettings } from "./game-channels.ts";
 import { DebugSettings } from "./debug.ts";
 import { ExportSettings } from "./export.ts";
 import { StatblockSettings } from "./statblock.ts";
@@ -11,11 +10,37 @@ import { UserMentionConfig } from "./user-mention-config.ts";
  * Initializes settings. Must be called only once.
  */
 export function registerSettings(): void {
-    BotSettings.registerSettingsAndCreateMenu("fas fa-robot");
+    // Shared unified channel config — written by both bot and manual settings UIs
+    game.settings.register(MODULE_NAME, "game-channels", {
+        name: `${MODULE_NAME}.Setting.GameChannels.Name`,
+        hint: `${MODULE_NAME}.Setting.GameChannels.Hint`,
+        scope: "world",
+        config: false,
+        type: String,
+        default: "[]",
+    });
 
-    DiscordWebhookSettings.registerSettingsAndCreateMenu(
-        "fa-brands fa-discord",
-    );
+    // Multi-select: which channels appear in journal/image/text-selection menus
+    game.settings.register(MODULE_NAME, "discord-menu-channels", {
+        name: `${MODULE_NAME}.Setting.DiscordMenuChannels.Name`,
+        hint: `${MODULE_NAME}.Setting.DiscordMenuChannels.Hint`,
+        scope: "world",
+        config: false,
+        type: String,
+        default: "[]",
+    });
+
+    // Action emoji map discovered from guild emojis during Test Connection
+    game.settings.register(MODULE_NAME, "action-emojis", {
+        name: "",
+        hint: "",
+        scope: "world",
+        config: false,
+        type: String,
+        default: "{}",
+    });
+
+    GameChannelSettings.registerSettingsAndCreateMenu("fa-brands fa-discord");
 
     TrackerSettings.registerSettingsAndCreateMenu("fa-brands fa-discord");
 

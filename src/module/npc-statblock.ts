@@ -1,7 +1,7 @@
 import type { NPCPF2e } from "foundry-pf2e";
-import { Channel } from "./constants.ts";
+import { MODULE_NAME, type ChannelTargetId } from "./constants.ts";
 import { postDiscord } from "./discord.ts";
-import { isChannelActive } from "./helpers.ts";
+import { isChannelTargetActive } from "./helpers.ts";
 import {
     validateDiscordMessage,
     handleValidationResult,
@@ -582,8 +582,12 @@ function getOrdinalSuffix(num: number): string {
 }
 
 export async function sendNPCStatblock(actor: NPCPF2e): Promise<void> {
-    if (!isChannelActive(Channel.GM)) {
-        ui.notifications.warn("GM Discord channel is not configured");
+    const gmChannel = game.settings.get(
+        MODULE_NAME,
+        "gm-output-channel",
+    ) as ChannelTargetId;
+    if (!isChannelTargetActive(gmChannel)) {
+        ui.notifications.warn("GM output channel is not configured");
         return;
     }
 
@@ -601,7 +605,7 @@ export async function sendNPCStatblock(actor: NPCPF2e): Promise<void> {
             return;
         }
 
-        await postDiscord(Channel.GM, statblock);
+        await postDiscord(gmChannel, statblock);
         ui.notifications.info(`Sent ${actor.name} statblock to Discord`);
     } catch (error) {
         console.error("Failed to send NPC statblock:", error);

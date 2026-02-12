@@ -3,9 +3,9 @@ import type * as fields from "foundry-pf2e/foundry/common/data/fields.d.mts";
 
 // DataSchema type for defineSchema return value
 type DataSchema = Record<string, fields.DataField>;
-import { Channel } from "./constants.ts";
 import { postDiscord } from "./discord.ts";
-import { getActiveChannels } from "./helpers.ts";
+import { getActiveChannelTargets } from "./helpers.ts";
+import type { ChannelTargetId } from "./constants.ts";
 import type { RegionEvent } from "foundry-pf2e/foundry/client/documents/region.mjs";
 
 // Runtime globals
@@ -51,8 +51,8 @@ class PostDiscordRegionBehaviorType extends foundry.data.regionBehaviors
             channel: new fields.StringField({
                 required: true,
                 nullable: false,
-                initial: Channel.IC,
-                choices: getActiveChannels() as Record<Channel, string>,
+                initial: Object.keys(getActiveChannelTargets())[0] ?? "",
+                choices: getActiveChannelTargets() as Record<string, string>,
             }),
             content: new fields.StringField({ required: true }),
             once: new fields.BooleanField({ initial: true }),
@@ -80,7 +80,7 @@ class PostDiscordRegionBehaviorType extends foundry.data.regionBehaviors
             game.togglePause(true, true);
         }
 
-        postDiscord(this.channel as Channel, this.content as string);
+        postDiscord(this.channel as ChannelTargetId, this.content as string);
     }
 }
 

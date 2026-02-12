@@ -8,12 +8,12 @@ import {
 } from "foundry-pf2e";
 import Table from "table-layout";
 
-import { Channel, MODULE_NAME } from "./constants.ts";
+import { MODULE_NAME, type ChannelTargetId } from "./constants.ts";
 import { createDiscordFormData, postDiscordMessage } from "./discord.ts";
 import { generateImageLink } from "./images.ts";
 import {
-    getChannelAvatar,
-    getChannelUsername,
+    getChannelTargetAvatar,
+    getChannelTargetUsername,
     isComplexHazardOrNpc,
 } from "./helpers.ts";
 import { getActorAlias } from "./npcs.ts";
@@ -408,9 +408,9 @@ export async function updateTracker(): Promise<void> {
     const channel = game.settings.get(
         MODULE_NAME,
         "tracker-output-channel",
-    ) as Channel;
-    const username = getChannelUsername(channel);
-    const avatarLink = await generateImageLink(getChannelAvatar(channel));
+    ) as ChannelTargetId;
+    const username = getChannelTargetUsername(channel);
+    const avatarLink = await generateImageLink(getChannelTargetAvatar(channel));
     const formData = createDiscordFormData(username, avatarLink, content, []);
     await postDiscordMessage(channel, formData);
     ui.notifications.info("Posted combat tracker to Discord");

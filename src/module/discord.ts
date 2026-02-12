@@ -1,19 +1,23 @@
-import { Channel, DiscordEmbed, MODULE_NAME } from "./constants.ts";
+import {
+    MODULE_NAME,
+    type DiscordEmbed,
+    type ChannelTargetId,
+} from "./constants.ts";
 import { generateImageLink } from "./images.ts";
 import { createJournalData } from "./journals.ts";
 import {
-    getChannelWebhookUrl,
-    getChannelUsername,
-    getChannelAvatar,
-    isChannelActive,
-    isBotModeEnabled,
-    getGameChannelByTag,
+    resolveChannel,
+    getChannelTargetUsername,
+    getChannelTargetAvatar,
+    isChannelTargetActive,
+    getAllGameChannels,
 } from "./helpers.ts";
 import {
     validateDiscordMessage,
     handleValidationResult,
 } from "./discord-validation.ts";
 import { executeWebhookFormData, createWebhook } from "./discord-bot.ts";
+import { makeChannelTargetId } from "./constants.ts";
 
 interface ImagePopoutLike {
     options?: { src?: string };
@@ -46,7 +50,7 @@ export function createDiscordFormData(
 }
 
 export async function postDiscordMessage(
-    channel: Channel,
+    targetId: ChannelTargetId,
     formData: FormData,
 ): Promise<void> {
     // Extract the payload for validation
@@ -70,107 +74,98 @@ export async function postDiscordMessage(
         }
     }
 
-    if (isBotModeEnabled()) {
-        const gc = getGameChannelByTag(channel);
-        if (!gc || !gc.webhookId || !gc.webhookToken) {
-            console.error(
-                `[PBD-Tools] No bot webhook configured for channel ${channel}`,
-            );
-            return;
-        }
-
-        try {
-            const response = await executeWebhookFormData(
-                gc.webhookId,
-                gc.webhookToken,
-                formData,
-            );
-
-            if (response.status === 404) {
-                // Webhook was deleted externally, try to recreate
-                console.warn(
-                    `[PBD-Tools] Webhook for ${channel} returned 404, recreating...`,
-                );
-                const token = game.settings.get(
-                    MODULE_NAME,
-                    "bot-token",
-                ) as string;
-                if (!token) return;
-
-                try {
-                    const newWebhook = await createWebhook(
-                        token,
-                        gc.channelId,
-                        "PBD-Tools",
-                    );
-                    gc.webhookId = newWebhook.id;
-                    gc.webhookToken = newWebhook.token ?? "";
-
-                    // Persist the updated config
-                    const { getGameChannels } = await import("./helpers.ts");
-                    const allChannels = getGameChannels();
-                    const idx = allChannels.findIndex(
-                        (c) => c.channelId === gc.channelId,
-                    );
-                    if (idx !== -1) {
-                        allChannels[idx] = gc;
-                        await game.settings.set(
-                            MODULE_NAME,
-                            "bot-game-channels",
-                            JSON.stringify(allChannels),
-                        );
-                    }
-
-                    // Retry with new webhook
-                    const retryResponse = await executeWebhookFormData(
-                        gc.webhookId,
-                        gc.webhookToken,
-                        formData,
-                    );
-                    if (!retryResponse.ok) {
-                        console.error(
-                            `[PBD-Tools] Retry failed: ${retryResponse.status} ${retryResponse.statusText}`,
-                        );
-                    }
-                } catch (recreateError) {
-                    console.error(
-                        "[PBD-Tools] Failed to recreate webhook:",
-                        recreateError,
-                    );
-                }
-            } else if (!response.ok) {
-                console.error(
-                    `Discord webhook error: ${response.status} ${response.statusText}`,
-                );
-            }
-        } catch (error) {
-            console.error("Error posting to Discord:", error);
-        }
+    const resolved = resolveChannel(targetId);
+    if (!resolved) {
+        console.error(
+            `[PBD-Tools] No channel configured for target ${targetId}`,
+        );
         return;
     }
 
-    // Manual mode: existing behavior
-    const webhookUrl: String = getChannelWebhookUrl(channel) as String;
     try {
-        const response = await fetch(webhookUrl.valueOf(), {
-            method: "POST",
-            body: formData,
-        });
+        const response = await executeWebhookFormData(
+            resolved.webhookId,
+            resolved.webhookToken,
+            formData,
+            resolved.threadId,
+        );
 
-        if (!response.ok)
+        if (response.status === 404 && resolved.mode === "bot") {
+            // Webhook was deleted externally, try to recreate
+            console.warn(
+                `[PBD-Tools] Webhook for ${targetId} returned 404, recreating...`,
+            );
+            const token = game.settings.get(MODULE_NAME, "bot-token") as string;
+            if (!token) return;
+
+            // Find the channel config to get the channelId for webhook creation
+            const allChannels = getAllGameChannels();
+            const idx = allChannels.findIndex(
+                (c) => makeChannelTargetId(c) === targetId,
+            );
+            if (idx === -1) return;
+            const gc = allChannels[idx];
+
+            try {
+                const newWebhook = await createWebhook(
+                    token,
+                    gc.channelId,
+                    "PBD-Tools",
+                );
+                gc.webhookId = newWebhook.id;
+                gc.webhookToken = newWebhook.token ?? "";
+
+                // Persist the updated config
+                allChannels[idx] = gc;
+                await game.settings.set(
+                    MODULE_NAME,
+                    "game-channels",
+                    JSON.stringify(allChannels),
+                );
+
+                // Retry with new webhook
+                const retryResponse = await executeWebhookFormData(
+                    gc.webhookId,
+                    gc.webhookToken,
+                    formData,
+                    resolved.threadId,
+                );
+                if (!retryResponse.ok) {
+                    console.error(
+                        `[PBD-Tools] Retry failed: ${retryResponse.status} ${retryResponse.statusText}`,
+                    );
+                }
+            } catch (recreateError) {
+                console.error(
+                    "[PBD-Tools] Failed to recreate webhook:",
+                    recreateError,
+                );
+                ui.notifications.error(
+                    "Discord webhook is invalid and could not be recreated. Ensure the CORS proxy is running, or re-add the channel in Game Channels settings.",
+                );
+            }
+        } else if (response.status === 404 && resolved.mode === "manual") {
+            console.error(
+                `[PBD-Tools] Manual webhook for ${targetId} returned 404. Check your webhook URL.`,
+            );
+            ui.notifications.error(
+                "Discord webhook returned 404. The webhook URL may be invalid.",
+            );
+        } else if (!response.ok) {
             console.error(
                 `Discord webhook error: ${response.status} ${response.statusText}`,
             );
+        }
     } catch (error) {
         console.error("Error posting to Discord:", error);
     }
 }
 
 export async function postDiscord(
-    channel: Channel | null,
+    targetId: ChannelTargetId | null,
     content: string,
 ): Promise<void> {
-    if (channel === null) return;
+    if (targetId === null) return;
 
     // Pre-validate content length before creating FormData
     const validationResult = validateDiscordMessage(content, []);
@@ -178,14 +173,16 @@ export async function postDiscord(
         return; // Exit if validation fails
     }
 
-    const username = getChannelUsername(channel);
-    const avatarLink = await generateImageLink(getChannelAvatar(channel));
+    const username = getChannelTargetUsername(targetId);
+    const avatarLink = await generateImageLink(
+        getChannelTargetAvatar(targetId),
+    );
     const formData = createDiscordFormData(username, avatarLink, content, []);
-    await postDiscordMessage(channel, formData);
+    await postDiscordMessage(targetId, formData);
 }
 
 export async function postDiscordImage(
-    channel: Channel,
+    targetId: ChannelTargetId,
     popout: ImagePopoutLike,
 ): Promise<void> {
     const formData: FormData = new FormData();
@@ -214,19 +211,19 @@ export async function postDiscordImage(
         return;
     }
 
-    const imageLink: string = await generateImageLink(imageUrl, false); // Don't require avatar compatibility for sharing
+    const imageLink: string = await generateImageLink(imageUrl, false);
     const params = {
-        username: getChannelUsername(channel),
-        avatar_url: await generateImageLink(getChannelAvatar(channel)),
+        username: getChannelTargetUsername(targetId),
+        avatar_url: await generateImageLink(getChannelTargetAvatar(targetId)),
         content: imageLink,
     };
 
     formData.append("payload_json", JSON.stringify(params));
-    await postDiscordMessage(channel, formData);
+    await postDiscordMessage(targetId, formData);
 
-    // Notify user of successful share
+    const { getChannelDisplayName } = await import("./helpers.ts");
     ui.notifications.info(
-        `Image shared to Discord ${channel.toUpperCase()} channel`,
+        `Image shared to Discord ${getChannelDisplayName(targetId)}`,
     );
 }
 
@@ -241,7 +238,7 @@ interface JournalSheetLike {
 }
 
 export async function postDiscordJournal(
-    channel: Channel,
+    targetId: ChannelTargetId,
     sheet: JournalSheetLike,
 ): Promise<void> {
     let page: JournalEntryPage | null = null;
@@ -276,11 +273,11 @@ export async function postDiscordJournal(
         return;
     }
 
-    await postDiscordJournalPage(channel, page);
+    await postDiscordJournalPage(targetId, page);
 }
 
 export async function postDiscordJournalPage(
-    channel: Channel,
+    targetId: ChannelTargetId,
     page: JournalEntryPage,
 ): Promise<void> {
     if (!page) {
@@ -294,9 +291,9 @@ export async function postDiscordJournalPage(
     const embeds = data.embeds;
 
     if (embeds.length > 0 || content !== "") {
-        const username: string = getChannelUsername(channel);
+        const username: string = getChannelTargetUsername(targetId);
         const avatar: string = await generateImageLink(
-            getChannelAvatar(channel),
+            getChannelTargetAvatar(targetId),
         );
         const formData = createDiscordFormData(
             username,
@@ -304,17 +301,17 @@ export async function postDiscordJournalPage(
             content,
             embeds,
         );
-        await postDiscordMessage(channel, formData);
+        await postDiscordMessage(targetId, formData);
 
-        // Notify user of successful share
+        const { getChannelDisplayName } = await import("./helpers.ts");
         ui.notifications.info(
-            `Journal page "${page.name}" shared to Discord ${channel.toUpperCase()} channel`,
+            `Journal page "${page.name}" shared to Discord ${getChannelDisplayName(targetId)}`,
         );
     }
 }
 
 export async function postDiscordJournalSelection(
-    channel: Channel,
+    targetId: ChannelTargetId,
     selection: string,
 ): Promise<void> {
     // Use the async version that resolves UUIDs
@@ -327,47 +324,27 @@ export async function postDiscordJournalSelection(
         return; // Exit if validation fails
     }
 
-    const username = getChannelUsername(channel);
-    const avatarLink = await generateImageLink(getChannelAvatar(channel));
+    const username = getChannelTargetUsername(targetId);
+    const avatarLink = await generateImageLink(
+        getChannelTargetAvatar(targetId),
+    );
     const formData = createDiscordFormData(username, avatarLink, content, []);
-    await postDiscordMessage(channel, formData);
+    await postDiscordMessage(targetId, formData);
 
-    // Notify user of successful share
+    const { getChannelDisplayName } = await import("./helpers.ts");
     ui.notifications.info(
-        `Journal selection shared to Discord ${channel.toUpperCase()} channel`,
+        `Journal selection shared to Discord ${getChannelDisplayName(targetId)}`,
     );
 }
 
-export async function postNpcDiscordMessage(content: string): Promise<void> {
-    if (!isChannelActive(Channel.GM)) return;
-
-    const username = getChannelUsername(Channel.GM);
-    const avatarLink = await generateImageLink(getChannelAvatar(Channel.GM));
-    const formData = createDiscordFormData(username, avatarLink, content, []);
-    await postDiscordMessage(Channel.GM, formData);
-}
-
-export async function postPcDiscordMessage(content: string): Promise<void> {
-    const channel = game.settings.get(
-        MODULE_NAME,
-        "pc-export-channel",
-    ) as Channel;
-    if (!isChannelActive(channel)) return;
-
-    const username = getChannelUsername(channel);
-    const avatarLink = await generateImageLink(getChannelAvatar(channel));
-    const formData = createDiscordFormData(username, avatarLink, content, []);
-    await postDiscordMessage(channel, formData);
-}
-
 export async function postDiscordMessageAsPersona(
-    channel: Channel,
+    targetId: ChannelTargetId,
     content: string,
     embeds: DiscordEmbed[],
     username: string,
     avatarUrl: string,
 ): Promise<void> {
-    if (!isChannelActive(channel)) return;
+    if (!isChannelTargetActive(targetId)) return;
 
     const validationResult = validateDiscordMessage(content, embeds);
     if (!handleValidationResult(validationResult, "Discord message")) {
@@ -380,5 +357,5 @@ export async function postDiscordMessageAsPersona(
         content,
         embeds,
     );
-    await postDiscordMessage(channel, formData);
+    await postDiscordMessage(targetId, formData);
 }

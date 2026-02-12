@@ -15,13 +15,46 @@ In Foundry setup, click on the Install Module button and put the following path 
 
 ## Features
 
+### Game Channels
+
+Manage any number of Discord channels through a unified settings menu. Two modes are available:
+
+- **Bot Mode**: Provide a Discord bot token and the module auto-discovers channels and manages webhooks via RPGSage. A CORS proxy is required for bot API calls during setup (see [Cloudflare Proxy Setup](docs/cloudflare-proxy-setup.md)).
+- **Manual Mode**: Paste webhook URLs directly for each channel.
+
+Both modes store channels in a single unified config. Thread support is included — threads share their parent channel's webhook and post via Discord's `thread_id` parameter.
+
+Per-feature channel selection lets you route different outputs to different channels:
+- **Menu Channels**: Which channels appear in journal/image/text-selection context menus (empty = all)
+- **Tracker Output Channel**: Where combat tracker updates are posted
+- **PC Export Channel**: Where PC import notifications go
+- **GM Output Channel**: Where NPC statblocks and exports are posted
+- **Action Post Channel**: Where Create Post combat actions are posted
+
 ### Discord Integration
 
-- **Journal Sharing**: Send journal pages to IC, OOC, or GM Discord channels via context menu
+- **Journal Sharing**: Send journal pages to any configured channel via context menu
 - **Text Selection**: Highlight text in a journal page and post selected text to any channel
 - **Image Popouts**: Dropdown buttons on image popouts to post images directly to Discord
 - **HTML to Markdown**: Journal content automatically converted to Discord-compatible Markdown
 - **UUID Resolution**: Embedded content links resolved to proper text references
+- **User Mentions**: Map actors to Discord user IDs for @mentions in posts
+
+### Create Post (PF2e)
+
+Right-click any combat chat card to post a formatted action summary to Discord. Supports:
+
+- **Attack Rolls**: Headline with attacker, target, weapon; attack total and outcome (Hit/Miss/Critical)
+- **Damage Rolls**: Damage total with type breakdown; auto-links the preceding attack roll
+- **Spell Rolls**: Spell name, save type and DC, description formatted as subtext
+- **Skill Checks**: Action name, skill, target, roll result and degree of success (Success/Failure/Critical), outcome description
+- **Action Cards**: Non-rolling actions (Raise Shield, Stride, etc.) with description
+
+Posts are sent as the character's token persona (name + avatar). The dialog allows editing before sending, and a GM-whispered mirror appears in Foundry chat.
+
+Style options: **Text** (everything in message content) or **Embed** (mechanical details in a Discord embed).
+
+Action emojis (for 1-action, 2-action, etc. glyphs) are auto-discovered from guild custom emojis during bot setup.
 
 ### Combat Tracker (PF2e)
 
@@ -68,19 +101,23 @@ In Foundry setup, click on the Install Module button and put the following path 
 
 ## Configuration
 
-### Discord Webhooks
-Create webhooks for the IC, OOC, and GM channels in Discord. Copy the webhook URL to the appropriate channel settings in the module configuration.
+### Game Channels Setup
 
-Optional per-channel settings:
-- Custom username for posts
-- Custom avatar image for posts
+Open the **Game Channels** settings menu. Choose either:
 
-### Combat Tracker Mentions
-Map player characters to Discord user IDs to enable @mentions when their turn begins.
+1. **Bot Mode**: Enter your Discord bot token, set a CORS proxy URL ([setup guide](docs/cloudflare-proxy-setup.md)), click Test Connection. The module discovers channels via RPGSage webhooks. Add channels to your config.
+2. **Manual Mode**: For each channel, paste the Discord webhook URL and give it a name. For threads, enter the thread name and ID.
+
+Then configure which channels are used for each feature in the Export Settings and Tracker Settings menus.
+
+### User Mentions
+Map player characters to Discord user IDs to enable @mentions in combat tracker updates and Create Post output.
 
 ### Export Settings
-- Server upload vs local download
-- Automatic Discord posting
+- Action post channel and style (text/embed)
+- PC export channel and auto-post toggle
+- GM output channel
+- NPC server upload vs local download
 - Alias abbreviation length and mode
 - Spoiler tag wrapping
 
@@ -93,9 +130,9 @@ Map player characters to Discord user IDs to enable @mentions when their turn be
 
 ## Limitations
 
-- Assumes a standard PbD channel configuration with IC, OOC, and GM channels
-- PF2e-specific features require the PF2e game system
+- PF2e-specific features (combat tracker, Create Post, exports) require the PF2e game system
 - Influence statblocks require the pf2e-bestiary-tracking module
+- Bot mode requires a CORS proxy for Discord API setup calls (message sending uses webhooks directly)
 
 ## Acknowledgements
 

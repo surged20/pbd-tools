@@ -1,6 +1,6 @@
 <form class="flexcol" autocomplete="off" onsubmit="event.preventDefault();">
     <section class="content">
-        {{!-- Setup Instructions --}}
+        {{!-- Section 1: Bot Configuration --}}
         <details class="bot-instructions">
             <summary><strong>{{localize 'pbd-tools.Setting.BotSettings.Instructions.Title'}}</strong></summary>
             <ol>
@@ -16,7 +16,6 @@
 
         <hr>
 
-        {{!-- Bot Configuration --}}
         <h3>{{localize 'pbd-tools.Setting.BotSettings.SectionConfig'}}</h3>
 
         <div class="form-group">
@@ -57,11 +56,6 @@
             </button>
         </div>
 
-        <hr>
-
-        {{!-- Guild & Discovery --}}
-        <h3>{{localize 'pbd-tools.Setting.BotSettings.SectionDiscovery'}}</h3>
-
         <div class="form-group">
             <label>{{localize 'pbd-tools.Setting.BotSettings.GuildName.Name'}}</label>
             <div class="form-fields">
@@ -83,12 +77,11 @@
                 <select class="bot-channel-select" style="flex: 2;">
                     <option value="">{{localize 'pbd-tools.Setting.BotSettings.SelectChannel'}}</option>
                     {{#each discoveredChannels}}
+                    {{#if this.parentId}}
+                    <option value="{{this.id}}">&nbsp;&nbsp;{{this.name}}</option>
+                    {{else}}
                     <option value="{{this.id}}">#{{this.name}}</option>
-                    {{/each}}
-                </select>
-                <select class="bot-tag-select" style="flex: 1;">
-                    {{#each tagChoices}}
-                    <option value="{{this.value}}">{{this.label}}</option>
+                    {{/if}}
                     {{/each}}
                 </select>
                 <button type="button" class="bot-add-channel" style="flex: 0 0 auto;">
@@ -100,44 +93,104 @@
 
         <hr>
 
-        {{!-- Configured Channels --}}
-        <h3>{{localize 'pbd-tools.Setting.BotSettings.SectionChannels'}}</h3>
+        {{!-- Section 2: Add Manual Channel --}}
+        <h3>{{localize 'pbd-tools.Setting.GameChannelSettings.SectionManual'}}</h3>
 
-        <div class="bot-channel-list">
-            {{#if gameChannels.length}}
-                {{#each gameChannels}}
-                <div class="bot-channel-config" style="border: 1px solid var(--color-border-light-tertiary); padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 4px;">
+        <div class="form-group">
+            <label>{{localize 'pbd-tools.Setting.DiscordWebhookSettings.ChannelNameLabel'}}</label>
+            <div class="form-fields">
+                <input type="text" class="webhook-channel-name" placeholder="e.g. IC, OOC, GM..." />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize 'pbd-tools.Setting.DiscordWebhookSettings.WebhookUrlLabel'}}</label>
+            <div class="form-fields">
+                <input type="text" class="webhook-channel-url" placeholder="https://discord.com/api/webhooks/..." />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize 'pbd-tools.Setting.DiscordWebhookSettings.PersonaName'}}</label>
+            <div class="form-fields">
+                <input type="text" class="webhook-channel-username" placeholder="PbDT" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize 'pbd-tools.Setting.DiscordWebhookSettings.PersonaAvatar'}}</label>
+            <div class="form-fields">
+                <file-picker class="webhook-channel-avatar" type="image" value="icons/vtt-512.png">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="button" class="webhook-add-channel">
+                <i class="fas fa-plus"></i> {{localize 'pbd-tools.Setting.DiscordWebhookSettings.AddChannel'}}
+            </button>
+        </div>
+
+        <hr>
+
+        {{!-- Section 3: Configured Channels --}}
+        <h3>{{localize 'pbd-tools.Setting.GameChannelSettings.SectionChannels'}}</h3>
+
+        <div class="channel-list">
+            {{#if allChannels.length}}
+                {{#each allChannels}}
+                <div class="channel-config" style="border: 1px solid var(--color-border-light-tertiary); padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 4px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-                        <strong>#{{this.channelName}}</strong>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <select name="channel-tag-{{this.channelId}}">
-                                <option value="ic" {{#if (eq this.tag "ic")}}selected{{/if}}>IC</option>
-                                <option value="ooc" {{#if (eq this.tag "ooc")}}selected{{/if}}>OOC</option>
-                                <option value="gm" {{#if (eq this.tag "gm")}}selected{{/if}}>GM</option>
-                            </select>
-                            <button type="button" class="bot-remove-channel" data-channel-id="{{this.channelId}}" title="{{localize 'pbd-tools.Setting.BotSettings.RemoveChannel'}}">
+                        <span>
+                            <strong>{{#if this.threadName}}#{{this.channelName}} > {{this.threadName}}{{else}}{{this.channelName}}{{/if}}</strong>
+                            {{#if this.isBot}}<span class="tag" style="font-size: 0.75em; padding: 0.1em 0.4em; border-radius: 3px; background: var(--color-border-light-tertiary);">{{localize 'pbd-tools.Setting.GameChannelSettings.ModeBadgeBot'}}</span>{{/if}}
+                            {{#if this.isManual}}<span class="tag" style="font-size: 0.75em; padding: 0.1em 0.4em; border-radius: 3px; background: var(--color-border-light-tertiary);">{{localize 'pbd-tools.Setting.GameChannelSettings.ModeBadgeManual'}}</span>{{/if}}
+                        </span>
+                        <span style="display: flex; align-items: center; gap: 0.5rem;">
+                            {{#if this.hasWebhook}}
+                            <label style="margin: 0; font-weight: normal; white-space: nowrap;" title="{{localize 'pbd-tools.Setting.GameChannelSettings.MenuChannelsHint'}}">
+                                <input type="checkbox" name="menu-channel-{{this.targetId}}" {{checked this.isMenuChecked}} />
+                                {{localize 'pbd-tools.Setting.GameChannelSettings.ShowInMenus'}}
+                            </label>
+                            {{/if}}
+                            <button type="button" class="remove-channel" data-target-id="{{this.targetId}}" title="{{localize 'pbd-tools.Setting.BotSettings.RemoveChannel'}}">
                                 <i class="fas fa-trash"></i>
                             </button>
-                        </div>
+                        </span>
                     </div>
                     <div class="form-group" style="margin-bottom: 0.25rem;">
-                        <label>{{localize 'pbd-tools.Setting.BotSettings.GmUsername'}}</label>
+                        <label>{{localize 'pbd-tools.Setting.BotSettings.PersonaName'}}</label>
                         <div class="form-fields">
-                            <input type="text" name="channel-username-{{this.channelId}}" value="{{this.gmUsername}}" />
+                            <input type="text" name="channel-username-{{this.targetId}}" value="{{this.username}}" />
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>{{localize 'pbd-tools.Setting.BotSettings.GmAvatar'}}</label>
+                        <label>{{localize 'pbd-tools.Setting.BotSettings.PersonaAvatar'}}</label>
                         <div class="form-fields">
-                            <file-picker name="channel-avatar-{{this.channelId}}" type="image" value="{{this.gmAvatar}}">
+                            <file-picker name="channel-avatar-{{this.targetId}}" type="image" value="{{this.avatar}}">
                         </div>
                     </div>
                 </div>
                 {{/each}}
             {{else}}
-                <p class="notes">{{localize 'pbd-tools.Setting.BotSettings.NoChannelsConfigured'}}</p>
+                <p class="notes">{{localize 'pbd-tools.Setting.GameChannelSettings.NoChannels'}}</p>
             {{/if}}
         </div>
+
+        <hr>
+
+        {{!-- Section 4: Action Emojis --}}
+        <h3>{{localize 'pbd-tools.Setting.GameChannelSettings.SectionActionEmojis'}}</h3>
+        <p class="notes">{{localize 'pbd-tools.Setting.GameChannelSettings.ActionEmojisHint'}}</p>
+
+        {{#each actionEmojis}}
+        <div class="form-group">
+            <label>{{this.label}}</label>
+            <div class="form-fields">
+                <input type="text" name="action-emoji-{{this.key}}" value="{{this.value}}" placeholder="<:emoji_name:id>" />
+            </div>
+        </div>
+        {{/each}}
+
     </section>
 
     <footer class="sheet-footer buttons">

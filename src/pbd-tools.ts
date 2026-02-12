@@ -1,6 +1,17 @@
 import type { ActorPF2e, EncounterPF2e, EncounterTracker } from "foundry-pf2e";
-import { Channel, MODULE_NAME, isPF2e } from "./module/constants.ts";
-import { convertToMarkdown, isComplexHazardOrNpc } from "./module/helpers.ts";
+import {
+    MODULE_NAME,
+    isPF2e,
+    type ChannelTargetId,
+} from "./module/constants.ts";
+import {
+    convertToMarkdown,
+    isComplexHazardOrNpc,
+    hasConfiguredChannels,
+    isChannelTargetActive,
+    getMultiSelectChannels,
+    getChannelDisplayName,
+} from "./module/helpers.ts";
 import {
     exportActorNpcTsv,
     exportEncounterNpcTsv,
@@ -8,7 +19,6 @@ import {
     exportSceneNpcTsv,
 } from "./module/export.ts";
 import { regionsInit } from "./module/regions.ts";
-import { isChannelActive } from "./module/helpers.ts";
 import { registerSettings } from "./module/settings/settings.ts";
 import { updateTracker } from "./module/tracker.ts";
 import { postDiscordImage, postDiscord } from "./module/discord.ts";
@@ -48,14 +58,8 @@ Hooks.on("init", () => {
 
     const moduleData = game.modules.get(MODULE_NAME);
     if (moduleData) {
-        const ChannelExport = {
-            IC: Channel.IC,
-            OOC: Channel.OOC,
-            GM: Channel.GM,
-        };
         (moduleData as { api?: unknown }).api = {
             postDiscord,
-            Channel: ChannelExport,
             convertToMarkdown,
         };
     }
@@ -64,17 +68,19 @@ Hooks.on("init", () => {
 Hooks.on("ready", async () => {
     if (!game.user.isGM) return;
 
-    initContextMenu();
-
-    // Validate bot webhooks on startup
+    // Run migrations and validate webhooks
     try {
-        const { BotSettings } = await import(
-            "./module/settings/bot-settings.ts"
+        const { GameChannelSettings } = await import(
+            "./module/settings/game-channels.ts"
         );
-        await BotSettings.validateWebhooks();
+        await GameChannelSettings.migrateOldBotChannels();
+        await GameChannelSettings.migrateOldSettings();
+        await GameChannelSettings.validateWebhooks();
     } catch (error) {
-        console.warn("[PBD-Tools] Bot webhook validation failed:", error);
+        console.warn("[PBD-Tools] Channel migration/validation failed:", error);
     }
+
+    initContextMenu();
 });
 
 // Hook to store auto-generated aliases on actor creation (NPCs, Hazards, and PCs)
@@ -153,22 +159,28 @@ function beginEndEnabled(): boolean {
         MODULE_NAME,
         "enable-discord-tracker",
     ) as boolean;
-    const channelActive = isChannelActive(
-        game.settings.get(MODULE_NAME, "tracker-output-channel") as Channel,
-    );
-    const beginEndEnabled = game.settings.get(
+    const outputChannel = game.settings.get(
+        MODULE_NAME,
+        "tracker-output-channel",
+    ) as ChannelTargetId;
+    const channelActive = isChannelTargetActive(outputChannel);
+    const beginEnd = game.settings.get(
         MODULE_NAME,
         "tracker-begin-end",
     ) as boolean;
 
-    return trackerEnabled && channelActive && beginEndEnabled;
+    return trackerEnabled && channelActive && beginEnd;
 }
 
 Hooks.on("combatStart", async (_encounter: EncounterPF2e) => {
     if (!beginEndEnabled()) return;
 
+    const outputChannel = game.settings.get(
+        MODULE_NAME,
+        "tracker-output-channel",
+    ) as ChannelTargetId;
     await postDiscord(
-        Channel.IC,
+        outputChannel,
         "## " + game.i18n.localize(`${MODULE_NAME}.BeginEncounter`),
     );
     await updateTracker();
@@ -177,8 +189,12 @@ Hooks.on("combatStart", async (_encounter: EncounterPF2e) => {
 Hooks.on("deleteCombat", async (_encounter: EncounterPF2e) => {
     if (!beginEndEnabled()) return;
 
+    const outputChannel = game.settings.get(
+        MODULE_NAME,
+        "tracker-output-channel",
+    ) as ChannelTargetId;
     await postDiscord(
-        Channel.IC,
+        outputChannel,
         "## " + game.i18n.localize(`${MODULE_NAME}.EndEncounter`),
     );
 });
@@ -189,8 +205,6 @@ function createCombatControl(
     control: string,
     icon: string,
 ): HTMLAnchorElement {
-    // const encounterControls = html.find(".encounter-controls")[0];
-    // const encounterTitle = html.find(".encounter-title")[0];
     const encounterControls = element.querySelector(".encounter-controls");
     const encounterTitle = element.querySelector(".encounter-title");
     const a = document.createElement("a");
@@ -211,10 +225,7 @@ function createCombatControl(
 }
 Hooks.on(
     "renderCombatTracker",
-    async (
-        app: EncounterTracker<EncounterPF2e>,
-        // html: JQuery<JQuery.Node>,
-    ) => {
+    async (app: EncounterTracker<EncounterPF2e>) => {
         if (
             !game.user.isGM ||
             !isPF2e() ||
@@ -228,19 +239,17 @@ Hooks.on(
                 MODULE_NAME,
                 "enable-discord-tracker",
             );
-            const channelActive = isChannelActive(
-                game.settings.get(
-                    MODULE_NAME,
-                    "tracker-output-channel",
-                ) as Channel,
-            );
+            const outputChannel = game.settings.get(
+                MODULE_NAME,
+                "tracker-output-channel",
+            ) as ChannelTargetId;
+            const channelActive = isChannelTargetActive(outputChannel);
             if (!trackerEnabled || !channelActive) return;
 
             const tooltip = game.i18n.localize(
                 `${MODULE_NAME}.UpdateTrackerTooltip`,
             );
             const a = createCombatControl(
-                // html,
                 app.element as unknown as Document,
                 tooltip,
                 "update-tracker",
@@ -261,7 +270,6 @@ Hooks.on(
                 `${MODULE_NAME}.ExportNpcsTrackerTooltip`,
             );
             const a = createCombatControl(
-                // html,
                 app.element as unknown as Document,
                 tooltip,
                 "export-npcs",
@@ -361,8 +369,11 @@ Hooks.on(
                 if (!documentId) return false;
                 const actor = game.actors.get(documentId) as ActorPF2e;
                 const isNpc = !!actor?.isOfType("npc");
-                const channelActive = isChannelActive(Channel.GM);
-                return isNpc && channelActive;
+                const gmChannel = game.settings.get(
+                    MODULE_NAME,
+                    "gm-output-channel",
+                ) as ChannelTargetId;
+                return isNpc && isChannelTargetActive(gmChannel);
             },
         });
         entryOptions.push({
@@ -389,7 +400,7 @@ Hooks.on(
 
         if (
             isPF2e() &&
-            isChannelActive(Channel.GM) &&
+            hasConfiguredChannels() &&
             app.actor &&
             isComplexHazardOrNpc(app.actor)
         ) {
@@ -428,46 +439,68 @@ interface HeaderControlButton {
     onClick: (event?: Event) => void;
 }
 
-// ImagePopout dropdown button handler
+// ImagePopout dropdown button handler — dynamic from configured menu channels
 Hooks.on(
     "getHeaderControlsImagePopout",
     (popout: ImagePopoutLike, buttons: HeaderControlButton[]) => {
         if (!game.user.isGM) return;
 
-        const createPopoutButton = (
-            channel: Channel,
-            label: string,
-        ): HeaderControlButton => {
-            return {
-                action: `pbd-discord-${label.toLowerCase()}`,
+        const menuChannels = getMultiSelectChannels("discord-menu-channels");
+        for (const targetId of menuChannels) {
+            const displayName = getChannelDisplayName(targetId);
+            buttons.unshift({
+                action: `pbd-discord-${targetId}`,
                 icon: "fa-brands fa-discord",
-                label: `${MODULE_NAME}.Discord.${label}`,
+                label: `Share to ${displayName}`,
                 visible: true,
                 onClick: (event?: Event) => {
                     event?.preventDefault?.();
                     event?.stopPropagation?.();
-                    postDiscordImage(channel, popout);
+                    postDiscordImage(targetId, popout);
                 },
-            };
-        };
-
-        if (isChannelActive(Channel.IC)) {
-            buttons.unshift(createPopoutButton(Channel.IC, "IC"));
-        }
-
-        if (isChannelActive(Channel.OOC)) {
-            buttons.unshift(createPopoutButton(Channel.OOC, "OOC"));
-        }
-
-        if (isChannelActive(Channel.GM)) {
-            buttons.unshift(createPopoutButton(Channel.GM, "GM"));
+            });
         }
     },
 );
 
-// Note: renderImagePopout hook not needed for ApplicationV2 dropdown buttons
+// Helper to find a journal page from a context menu item
+function findJournalPageFromLi(li: HTMLElement): JournalEntryPage | undefined {
+    const pageId = li.dataset.pageId || li.dataset.entryId;
 
-// Extend JournalSheet context menu for Discord options
+    const journalSheet = li.closest(".journal-sheet") as HTMLElement;
+    if (!journalSheet?.dataset) return undefined;
+
+    const appId = (journalSheet.dataset as DOMStringMap & { appid?: string })
+        .appid;
+    if (!appId) return undefined;
+
+    const app = (
+        ui as {
+            windows: Record<
+                number,
+                | {
+                      document?: {
+                          pages?: {
+                              find: (
+                                  fn: (p: JournalEntryPage) => boolean,
+                              ) => JournalEntryPage | undefined;
+                          };
+                      };
+                  }
+                | undefined
+            >;
+        }
+    ).windows[parseInt(appId)];
+
+    if (!app?.document?.pages || !pageId) return undefined;
+
+    return app.document.pages.find(
+        (p: JournalEntryPage) =>
+            p.id === pageId || String(p.sort) === pageId || p.name === pageId,
+    );
+}
+
+// Extend JournalSheet context menu for Discord options — dynamic from configured menu channels
 Hooks.on("ready", () => {
     if (!game.user.isGM) return;
 
@@ -481,193 +514,22 @@ Hooks.on("ready", () => {
             const options: ContextMenuEntry[] =
                 originalGetEntryContextOptions.call(this);
 
-            // Add Discord post options for each active channel
-            if (isChannelActive(Channel.IC)) {
+            const menuChannels = getMultiSelectChannels(
+                "discord-menu-channels",
+            );
+            for (const targetId of menuChannels) {
+                const displayName = getChannelDisplayName(targetId);
                 options.push({
-                    name: `${MODULE_NAME}.Discord.IC`,
+                    name: `Share to ${displayName}`,
                     icon: '<i class="fa-brands fa-discord"></i>',
                     callback: (li: HTMLElement) => {
-                        const pageId = li.dataset.pageId || li.dataset.entryId;
-
-                        // Get the journal sheet instance to find the page
-                        const journalSheet = li.closest(
-                            ".journal-sheet",
-                        ) as HTMLElement;
-                        if (journalSheet?.dataset) {
-                            const appId = (
-                                journalSheet.dataset as DOMStringMap & {
-                                    appid?: string;
-                                }
-                            ).appid;
-                            if (appId) {
-                                const app = (
-                                    ui as {
-                                        windows: Record<
-                                            number,
-                                            | {
-                                                  document?: {
-                                                      pages?: {
-                                                          find: (
-                                                              fn: (
-                                                                  p: JournalEntryPage,
-                                                              ) => boolean,
-                                                          ) =>
-                                                              | JournalEntryPage
-                                                              | undefined;
-                                                      };
-                                                  };
-                                              }
-                                            | undefined
-                                        >;
-                                    }
-                                ).windows[parseInt(appId)];
-                                if (app?.document?.pages && pageId) {
-                                    const page = app.document.pages.find(
-                                        (p: JournalEntryPage) =>
-                                            p.id === pageId ||
-                                            String(p.sort) === pageId ||
-                                            p.name === pageId,
-                                    );
-                                    if (page) {
-                                        import("./module/discord.ts").then(
-                                            ({ postDiscordJournalPage }) => {
-                                                postDiscordJournalPage(
-                                                    Channel.IC,
-                                                    page,
-                                                );
-                                            },
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    condition: () => true,
-                });
-            }
-
-            if (isChannelActive(Channel.OOC)) {
-                options.push({
-                    name: `${MODULE_NAME}.Discord.OOC`,
-                    icon: '<i class="fa-brands fa-discord"></i>',
-                    callback: (li: HTMLElement) => {
-                        const pageId = li.dataset.pageId || li.dataset.entryId;
-
-                        // Get the journal sheet instance to find the page
-                        const journalSheet = li.closest(
-                            ".journal-sheet",
-                        ) as HTMLElement;
-                        if (journalSheet?.dataset) {
-                            const appId = (
-                                journalSheet.dataset as DOMStringMap & {
-                                    appid?: string;
-                                }
-                            ).appid;
-                            if (appId) {
-                                const app = (
-                                    ui as {
-                                        windows: Record<
-                                            number,
-                                            | {
-                                                  document?: {
-                                                      pages?: {
-                                                          find: (
-                                                              fn: (
-                                                                  p: JournalEntryPage,
-                                                              ) => boolean,
-                                                          ) =>
-                                                              | JournalEntryPage
-                                                              | undefined;
-                                                      };
-                                                  };
-                                              }
-                                            | undefined
-                                        >;
-                                    }
-                                ).windows[parseInt(appId)];
-                                if (app?.document?.pages && pageId) {
-                                    const page = app.document.pages.find(
-                                        (p: JournalEntryPage) =>
-                                            p.id === pageId ||
-                                            String(p.sort) === pageId ||
-                                            p.name === pageId,
-                                    );
-                                    if (page) {
-                                        import("./module/discord.ts").then(
-                                            ({ postDiscordJournalPage }) => {
-                                                postDiscordJournalPage(
-                                                    Channel.OOC,
-                                                    page,
-                                                );
-                                            },
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    condition: () => true,
-                });
-            }
-
-            if (isChannelActive(Channel.GM)) {
-                options.push({
-                    name: `${MODULE_NAME}.Discord.GM`,
-                    icon: '<i class="fa-brands fa-discord"></i>',
-                    callback: (li: HTMLElement) => {
-                        const pageId = li.dataset.pageId || li.dataset.entryId;
-
-                        // Get the journal sheet instance to find the page
-                        const journalSheet = li.closest(
-                            ".journal-sheet",
-                        ) as HTMLElement;
-                        if (journalSheet?.dataset) {
-                            const appId = (
-                                journalSheet.dataset as DOMStringMap & {
-                                    appid?: string;
-                                }
-                            ).appid;
-                            if (appId) {
-                                const app = (
-                                    ui as {
-                                        windows: Record<
-                                            number,
-                                            | {
-                                                  document?: {
-                                                      pages?: {
-                                                          find: (
-                                                              fn: (
-                                                                  p: JournalEntryPage,
-                                                              ) => boolean,
-                                                          ) =>
-                                                              | JournalEntryPage
-                                                              | undefined;
-                                                      };
-                                                  };
-                                              }
-                                            | undefined
-                                        >;
-                                    }
-                                ).windows[parseInt(appId)];
-                                if (app?.document?.pages && pageId) {
-                                    const page = app.document.pages.find(
-                                        (p: JournalEntryPage) =>
-                                            p.id === pageId ||
-                                            String(p.sort) === pageId ||
-                                            p.name === pageId,
-                                    );
-                                    if (page) {
-                                        import("./module/discord.ts").then(
-                                            ({ postDiscordJournalPage }) => {
-                                                postDiscordJournalPage(
-                                                    Channel.GM,
-                                                    page,
-                                                );
-                                            },
-                                        );
-                                    }
-                                }
-                            }
+                        const page = findJournalPageFromLi(li);
+                        if (page) {
+                            import("./module/discord.ts").then(
+                                ({ postDiscordJournalPage }) => {
+                                    postDiscordJournalPage(targetId, page);
+                                },
+                            );
                         }
                     },
                     condition: () => true,

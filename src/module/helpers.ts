@@ -2,10 +2,11 @@ import TurndownService from "turndown";
 
 import {
     MODULE_NAME,
-    DISCORD_API_BASE,
-    Channel,
-    Channels,
+    DEFAULT_CHANNEL_USERNAME,
+    DEFAULT_CHANNEL_AVATAR,
     type GameChannelConfig,
+    type ChannelTargetId,
+    makeChannelTargetId,
 } from "./constants.ts";
 import type { ActorPF2e } from "foundry-pf2e";
 
@@ -96,123 +97,100 @@ export function isComplexHazardOrNpc(actor: ActorPF2e): boolean {
     );
 }
 
-export function isBotModeEnabled(): boolean {
-    return game.settings.get(MODULE_NAME, "bot-enabled") as boolean;
-}
+// ─── Unified target-based helpers ───────────────────────────────────────
 
-export function getGameChannels(): GameChannelConfig[] {
+export function getAllGameChannels(): GameChannelConfig[] {
     try {
         return JSON.parse(
-            game.settings.get(MODULE_NAME, "bot-game-channels") as string,
+            game.settings.get(MODULE_NAME, "game-channels") as string,
         ) as GameChannelConfig[];
     } catch {
         return [];
     }
 }
 
-export function getGameChannelByTag(
-    tag: string,
+export function getGameChannelByTargetId(
+    targetId: ChannelTargetId,
 ): GameChannelConfig | undefined {
-    return getGameChannels().find((gc) => gc.tag === tag);
+    return getAllGameChannels().find(
+        (gc) => makeChannelTargetId(gc) === targetId,
+    );
 }
 
-export function isChannelActive(channel: Channel): boolean {
-    if (isBotModeEnabled()) {
-        const gc = getGameChannelByTag(channel);
-        return (
-            gc !== undefined && gc.webhookId !== "" && gc.webhookToken !== ""
-        );
-    }
-
-    let url;
-    switch (channel) {
-        case Channel.IC:
-            url = game.settings.get(MODULE_NAME, "ic-url");
-            break;
-        case Channel.OOC:
-            url = game.settings.get(MODULE_NAME, "ooc-url");
-            break;
-        case Channel.GM:
-            url = game.settings.get(MODULE_NAME, "gm-url");
-            break;
-    }
-    return url !== "";
+export function isChannelTargetActive(targetId: ChannelTargetId): boolean {
+    const gc = getGameChannelByTargetId(targetId);
+    return gc !== undefined && gc.webhookId !== "" && gc.webhookToken !== "";
 }
 
-export function getActiveChannels(): Record<string, string> {
-    if (isBotModeEnabled()) {
-        const channels: Record<string, string> = {};
-        for (const gc of getGameChannels()) {
-            if (gc.webhookId && gc.webhookToken) {
-                const tag = gc.tag as keyof typeof Channels;
-                if (tag in Channels) {
-                    channels[gc.tag] = game.i18n.localize(Channels[tag]);
-                } else {
-                    channels[gc.tag] = gc.tag.toUpperCase();
-                }
-            }
-        }
-        return channels;
-    }
-
-    const channels = {};
-    for (const key in Channels) {
-        if (isChannelActive(key as Channel)) {
-            channels[key] = game.i18n.localize(Channels[key]);
+export function getActiveChannelTargets(): Record<ChannelTargetId, string> {
+    const targets: Record<ChannelTargetId, string> = {};
+    for (const gc of getAllGameChannels()) {
+        if (gc.webhookId && gc.webhookToken) {
+            const targetId = makeChannelTargetId(gc);
+            targets[targetId] = gc.threadName
+                ? gc.threadName
+                : `#${gc.channelName}`;
         }
     }
-    return channels;
+    return targets;
 }
 
-export function getChannelWebhookUrl(channel: Channel): string {
-    if (isBotModeEnabled()) {
-        const gc = getGameChannelByTag(channel);
-        if (gc) {
-            return `${DISCORD_API_BASE}/webhooks/${gc.webhookId}/${gc.webhookToken}`;
+export function getChannelTargetUsername(targetId: ChannelTargetId): string {
+    const gc = getGameChannelByTargetId(targetId);
+    return gc?.username || DEFAULT_CHANNEL_USERNAME;
+}
+
+export function getChannelTargetAvatar(targetId: ChannelTargetId): string {
+    const gc = getGameChannelByTargetId(targetId);
+    return gc?.avatar || DEFAULT_CHANNEL_AVATAR;
+}
+
+export interface ResolvedChannel {
+    webhookId: string;
+    webhookToken: string;
+    threadId?: string;
+    username: string;
+    avatar: string;
+    mode: "bot" | "manual";
+}
+
+export function resolveChannel(
+    targetId: ChannelTargetId,
+): ResolvedChannel | null {
+    const gc = getGameChannelByTargetId(targetId);
+    if (!gc || !gc.webhookId || !gc.webhookToken) return null;
+    return {
+        webhookId: gc.webhookId,
+        webhookToken: gc.webhookToken,
+        threadId: gc.threadId,
+        username: gc.username || DEFAULT_CHANNEL_USERNAME,
+        avatar: gc.avatar || DEFAULT_CHANNEL_AVATAR,
+        mode: gc.mode,
+    };
+}
+
+export function getMultiSelectChannels(settingKey: string): ChannelTargetId[] {
+    try {
+        const value = JSON.parse(
+            game.settings.get(MODULE_NAME, settingKey) as string,
+        ) as ChannelTargetId[];
+        if (!Array.isArray(value) || value.length === 0) {
+            // Empty array means "all active channels"
+            return Object.keys(getActiveChannelTargets());
         }
-        return "";
-    }
-
-    switch (channel) {
-        case Channel.IC:
-            return game.settings.get(MODULE_NAME, "ic-url") as string;
-        case Channel.OOC:
-            return game.settings.get(MODULE_NAME, "ooc-url") as string;
-        case Channel.GM:
-            return game.settings.get(MODULE_NAME, "gm-url") as string;
+        // Filter to only currently active targets
+        const active = getActiveChannelTargets();
+        return value.filter((id) => id in active);
+    } catch {
+        return Object.keys(getActiveChannelTargets());
     }
 }
 
-export function getChannelUsername(channel: Channel): string {
-    if (isBotModeEnabled()) {
-        const gc = getGameChannelByTag(channel);
-        if (gc) return gc.gmUsername;
-        return "Gamemaster";
-    }
-
-    switch (channel) {
-        case Channel.IC:
-            return game.settings.get(MODULE_NAME, "ic-username") as string;
-        case Channel.OOC:
-            return game.settings.get(MODULE_NAME, "ooc-username") as string;
-        case Channel.GM:
-            return game.settings.get(MODULE_NAME, "gm-username") as string;
-    }
+export function hasConfiguredChannels(): boolean {
+    return Object.keys(getActiveChannelTargets()).length > 0;
 }
 
-export function getChannelAvatar(channel: Channel): string {
-    if (isBotModeEnabled()) {
-        const gc = getGameChannelByTag(channel);
-        if (gc) return gc.gmAvatar;
-        return "icons/vtt-512.png";
-    }
-
-    switch (channel) {
-        case Channel.IC:
-            return game.settings.get(MODULE_NAME, "ic-avatar") as string;
-        case Channel.OOC:
-            return game.settings.get(MODULE_NAME, "ooc-avatar") as string;
-        case Channel.GM:
-            return game.settings.get(MODULE_NAME, "gm-avatar") as string;
-    }
+export function getChannelDisplayName(targetId: ChannelTargetId): string {
+    const targets = getActiveChannelTargets();
+    return targets[targetId] || targetId;
 }

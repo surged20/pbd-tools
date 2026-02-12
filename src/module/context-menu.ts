@@ -1,5 +1,6 @@
 import { postDiscordJournalSelection } from "./discord.ts";
-import { Channel } from "./constants.ts";
+import type { ChannelTargetId } from "./constants.ts";
+import { getMultiSelectChannels, getChannelDisplayName } from "./helpers.ts";
 
 class PBDContextMenu {
     menu: HTMLElement = document.createElement("menu");
@@ -22,7 +23,7 @@ class PBDContextMenu {
         li.addEventListener("click", async () => {
             const selection = PBDContextMenu.getSelectionText();
             if (selection)
-                await postDiscordJournalSelection(option.channel, selection);
+                await postDiscordJournalSelection(option.targetId, selection);
         });
         const button = document.createElement("button");
         button.classList.add("context-menu-btn");
@@ -37,6 +38,12 @@ class PBDContextMenu {
         button.appendChild(span);
         li.appendChild(button);
         this.menu.appendChild(li);
+    }
+
+    rebuild(items: { label: string; targetId: ChannelTargetId }[]): void {
+        // Remove existing menu
+        this.menu.remove();
+        this.build(items);
     }
 
     show(x, y) {
@@ -75,13 +82,17 @@ class PBDContextMenu {
     }
 }
 
+function buildMenuItems(): { label: string; targetId: ChannelTargetId }[] {
+    const channels = getMultiSelectChannels("discord-menu-channels");
+    return channels.map((targetId) => ({
+        label: `Post to ${getChannelDisplayName(targetId)}`,
+        targetId,
+    }));
+}
+
 export function initContextMenu(): void {
     const contextMenu = new PBDContextMenu({
-        items: [
-            { label: "Post to IC", channel: Channel.IC },
-            { label: "Post to OOC", channel: Channel.OOC },
-            { label: "Post to GM", channel: Channel.GM },
-        ],
+        items: buildMenuItems(),
     });
 
     document.addEventListener("contextmenu", (ev: PointerEvent) => {
@@ -92,6 +103,9 @@ export function initContextMenu(): void {
             target.classList.contains("editor-content") ||
             $(target).parents("div.editor-content").length
         ) {
+            // Rebuild menu items each time to pick up config changes
+            contextMenu.rebuild(buildMenuItems());
+
             const time = contextMenu.isOpen() ? 100 : 0;
             contextMenu.hide();
             setTimeout(() => {

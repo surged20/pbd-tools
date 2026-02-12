@@ -6,7 +6,7 @@ import type {
     NPCPF2e,
 } from "foundry-pf2e";
 
-import { MODULE_NAME } from "./constants.ts";
+import { MODULE_NAME, type ChannelTargetId } from "./constants.ts";
 
 // Runtime globals available in Foundry v13
 declare const foundry: {
@@ -26,9 +26,9 @@ declare const foundry: {
         };
     };
 };
-import { postNpcDiscordMessage, postPcDiscordMessage } from "./discord.ts";
+import { postDiscord } from "./discord.ts";
 import { isRemoteAccessible, getRemoteURL } from "./foundry.ts";
-import { convertToMarkdown } from "./helpers.ts";
+import { convertToMarkdown, isChannelTargetActive } from "./helpers.ts";
 import { createPathbuilderJson } from "./pathbuilder.ts";
 import {
     createNpcTsvWithDialog,
@@ -109,9 +109,16 @@ async function exportNpcTsv(
             );
 
             if (postToDiscord) {
-                await postNpcDiscordMessage(
-                    removeBlankLines(convertToMarkdown(message)),
-                );
+                const gmChannel = game.settings.get(
+                    MODULE_NAME,
+                    "gm-output-channel",
+                ) as ChannelTargetId;
+                if (isChannelTargetActive(gmChannel)) {
+                    await postDiscord(
+                        gmChannel,
+                        removeBlankLines(convertToMarkdown(message)),
+                    );
+                }
             }
         } else {
             ui.notifications.error(
@@ -244,7 +251,16 @@ export async function exportPcJson(
         const message = createPcMessage(actor.name, fileName);
         await postPcChatMessage(message);
         if (game.settings.get(MODULE_NAME, "post-pc-to-discord")) {
-            postPcDiscordMessage(removeBlankLines(convertToMarkdown(message)));
+            const pcChannel = game.settings.get(
+                MODULE_NAME,
+                "pc-export-channel",
+            ) as ChannelTargetId;
+            if (isChannelTargetActive(pcChannel)) {
+                postDiscord(
+                    pcChannel,
+                    removeBlankLines(convertToMarkdown(message)),
+                );
+            }
         }
     } else {
         await globalThis.saveDataToFile(jsonFile, fileType, fileName);

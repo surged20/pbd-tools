@@ -1,10 +1,5 @@
 {
     "pbd-tools": {
-        "Channel": {
-            "IC": "IC",
-            "OOC": "OOC",
-            "GM": "GM"
-        },
         "Export": {
             "Complete": "exported to RPG Sage",
             "Download": "RPG Sage Export - Download",
@@ -12,6 +7,14 @@
             "Npcs": "Export NPCs",
             "RpgSage": "RPG Sage",
             "Server": "RPG Sage Export - Server"
+        },
+        "CreatePost": {
+            "MenuLabel": "Create Post",
+            "DialogTitle": "Create Discord Post",
+            "PostingTo": "Posting to:",
+            "Posted": "Post sent to Discord",
+            "MirrorSpeaker": "Discord Post",
+            "EmbedPreviewLabel": "Embed (auto-generated)"
         },
         "Statblock": {
             "SendInfluence": "Send Influence Statblock",
@@ -24,13 +27,25 @@
                 "Label": "Configure Mentions",
                 "Hint": "Add Player Character to Discord User ID Mentions"
             },
+            "GameChannels": {
+                "Name": "Game Channels",
+                "Hint": "Configured Discord channels for sending messages."
+            },
+            "DiscordMenuChannels": {
+                "Name": "Menu Channels",
+                "Hint": "Which channels appear in journal, image, and text selection menus. Empty = all channels."
+            },
+            "GmOutputChannel": {
+                "Name": "GM Output Channel",
+                "Hint": "Discord channel for NPC statblocks, influence statblocks, and NPC exports."
+            },
             "BotSettings": {
                 "Name": "Discord Bot",
                 "Label": "Configure Bot",
                 "Hint": "Manage Discord bot integration and channel webhooks",
                 "Enabled": {
                     "Name": "Enable Bot Mode",
-                    "Hint": "Use a Discord bot to manage webhooks automatically. Takes precedence over manual webhook URLs when enabled."
+                    "Hint": "Use a Discord bot to manage webhooks automatically."
                 },
                 "Token": {
                     "Name": "Bot Token",
@@ -38,7 +53,7 @@
                 },
                 "ProxyUrl": {
                     "Name": "CORS Proxy URL",
-                    "Hint": "Local proxy for Discord API calls during bot setup. Run 'npm run proxy' to start it. Only needed for Test Connection, Discover Channels, and adding channels — not for sending messages."
+                    "Hint": "Proxy for Discord API calls during bot setup. Run 'npm run proxy' for a local proxy, or deploy a Cloudflare Worker (see docs/cloudflare-proxy-setup.md). Only needed for Test Connection, Discover Channels, and adding channels — not for sending messages."
                 },
                 "RpgSageAppId": {
                     "Name": "RPGSage Application ID",
@@ -63,11 +78,11 @@
                 "Instructions": {
                     "Title": "Bot Setup Instructions",
                     "Step1": "Go to the <a href=\"https://discord.com/developers/applications\" target=\"_blank\">Discord Developer Portal</a> and click <strong>New Application</strong>. Give it a name (e.g. \"PBD-Tools\") and click Create.",
-                    "Step2": "In the left sidebar, click <strong>Bot</strong>. Click <strong>Reset Token</strong>, confirm, then <strong>copy the token</strong>. You will not be able to see it again. No Privileged Gateway Intents are needed.",
+                    "Step2": "In the left sidebar, click <strong>Bot</strong>. Click <strong>Reset Token</strong>, confirm, then <strong>copy the token</strong>. You will not be able to see it again. Enable the <strong>Server Members Intent</strong> under Privileged Gateway Intents if you want to look up Discord members for user mentions.",
                     "Step3": "In the left sidebar, click <strong>OAuth2</strong>. Under <em>OAuth2 URL Generator</em>, check the <strong>bot</strong> scope. Under <em>Bot Permissions</em>, check <strong>Manage Webhooks</strong> and <strong>View Channels</strong> (so the bot can resolve channel names). Copy the generated URL at the bottom, open it in your browser, select your Discord server, and authorize.",
-                    "Step4": "In a terminal, run <code>npm run proxy</code> to start the local CORS proxy. This is needed for bot setup (Test Connection, Discover Channels, adding channels). It is <em>not</em> needed after setup — message sending goes directly to Discord.",
+                    "Step4": "Start a CORS proxy for bot setup. Either run <code>npm run proxy</code> locally, or deploy a Cloudflare Worker (see docs/cloudflare-proxy-setup.md for free setup). Enter the proxy URL below.",
                     "Step5": "Paste the bot token below and click <strong>Test Connection</strong>. Your Discord server name should appear. Then click <strong>Discover Channels</strong> to find channels where RPGSage has webhooks.",
-                    "Step6": "Select a channel, assign it a tag (IC/OOC/GM), and click <strong>+</strong> to add it. Configure the GM persona name and avatar for each channel.",
+                    "Step6": "Select a channel or thread and click <strong>+</strong> to add it. Configure the persona name and avatar for each channel.",
                     "Step7": "Check <strong>Enable Bot Mode</strong> and click <strong>Save</strong>. You can stop the proxy."
                 },
                 "SectionConfig": "Bot Configuration",
@@ -77,8 +92,8 @@
                 "DiscoverChannels": "Discover Channels",
                 "AddChannelLabel": "Add Channel",
                 "SelectChannel": "-- Select a channel --",
-                "GmUsername": "GM/Narrator Name",
-                "GmAvatar": "GM/Narrator Avatar",
+                "PersonaName": "Persona Name",
+                "PersonaAvatar": "Persona Avatar",
                 "RemoveChannel": "Remove channel",
                 "NoChannelsConfigured": "No channels configured. Use Discover Channels above to find RPGSage channels, then add them here.",
                 "NoToken": "Please enter a bot token first.",
@@ -90,17 +105,47 @@
                 "NoAppId": "Please enter the RPGSage application ID.",
                 "DiscoveredCount": "Discovered {count} channel(s) with RPGSage webhooks.",
                 "DiscoveryFailed": "Channel discovery failed. Check the bot token and RPGSage app ID.",
-                "SelectChannelAndTag": "Please select a channel and tag.",
                 "ChannelAlreadyAdded": "This channel is already configured.",
-                "ChannelAdded": "Added #{name} as {tag} channel.",
+                "ChannelAdded": "Added {name} channel.",
                 "ChannelRemoved": "Removed #{name} channel configuration.",
                 "WebhookCreateFailed": "Failed to create webhook. Check bot permissions (Manage Webhooks).",
-                "WebhooksCleaned": "All managed webhooks have been removed from Discord."
+                "WebhooksCleaned": "All managed webhooks have been removed from Discord.",
+                "AddParentFirst": "Add the parent channel before adding threads in it.",
+                "EmojisDiscovered": "Discovered {count} PF2e action emoji(s)"
+            },
+            "GameChannelSettings": {
+                "Name": "Game Channels",
+                "Label": "Configure Channels",
+                "Hint": "Manage Discord channels for bot and manual webhook modes.",
+                "SectionManual": "Add Manual Channel",
+                "SectionChannels": "Configured Channels",
+                "SectionMenuChannels": "Menu Channels",
+                "MenuChannelsHint": "Select which channels appear in journal, image, and text selection menus. If none are selected, all channels are shown.",
+                "NoChannels": "No channels configured. Use the bot discovery or manual webhook options above to add channels.",
+                "ModeBadgeBot": "bot",
+                "ModeBadgeManual": "manual",
+                "ShowInMenus": "In menus",
+                "SectionActionEmojis": "Action Emojis",
+                "ActionEmojisHint": "Discord custom emoji for PF2e action costs. Auto-discovered during Test Connection, or enter manually in <:name:id> format."
             },
             "DiscordWebhookSettings": {
                 "Name": "Discord Webhooks (Manual)",
                 "Label": "Configure Webhooks",
-                "Hint": "Manual webhook URL fallback. Used when Bot Mode is disabled."
+                "Hint": "Manually add Discord channels via webhook URLs.",
+                "SectionAdd": "Add Channel",
+                "SectionChannels": "Configured Channels",
+                "ChannelNameLabel": "Channel Name",
+                "WebhookUrlLabel": "Webhook URL",
+                "PersonaName": "Persona Name",
+                "PersonaAvatar": "Persona Avatar",
+                "AddChannel": "Add Channel",
+                "RemoveChannel": "Remove channel",
+                "NoChannels": "No channels configured. Add a channel using a Discord webhook URL above.",
+                "EnterName": "Please enter a channel name.",
+                "EnterUrl": "Please enter a webhook URL.",
+                "InvalidUrl": "Invalid webhook URL. Expected format: https://discord.com/api/webhooks/{id}/{token}",
+                "ChannelAdded": "Added {name} channel.",
+                "ChannelRemoved": "Channel removed."
             },
             "ExportSettings": {
                 "Name": "Exports",
@@ -158,6 +203,16 @@
                 "Name": "OOC Discord avatar image",
                 "Hint": "Avatar image used for out of character channel Discord posts"
             },
+            "ActionPostChannel": {
+                "Name": "Action Post Channel",
+                "Hint": "Discord channel that receives action posts from damage roll context menus"
+            },
+            "ActionPostStyle": {
+                "Name": "Action Post Style",
+                "Hint": "Text puts everything in the message. Embed separates mechanical details into a Discord embed."
+            },
+            "ActionPostStyleText": "Text",
+            "ActionPostStyleEmbed": "Embed",
             "PcExportChannel": {
                 "Name": "PC Export Channel",
                 "Hint": "Discord channel that receives PC export posts"
@@ -255,7 +310,7 @@
                 "Hint": "Text to display above the hit point column"
             },
             "TrackerConditionsDisplay": {
-                "Name": "Display conditions/fffects",
+                "Name": "Display conditions/effects",
                 "Hint": "Display a list of active conditions/effects present on each combatant"
             },
             "TrackerAcDisplayAlias": "Alias",
@@ -274,27 +329,8 @@
             "UserIDLabel": "Discord User ID",
             "AddMapping": "Add PC to User ID Notification"
         },
-        "WebhookSettings": {
-            "Title": "Configure Discord webhook URLs",
-            "Description": "Select or enter a channel label and associate with a Discord webhook URL",
-            "DescriptionUserID": "The Discord User ID may be obtained by <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5CRSRTWYCGPHZQ37H\">enabling developer mode</a> and then <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5H5D7JBY2QKKPVKNA\">copying the User ID</a>",
-            "PCLabel": "Channel",
-            "SelectPC": "Select or create a channel",
-            "UserIDLabel": "Discord Webhook URL",
-            "AddMapping": "Add channel to webhook URL mapping"
-        },
         "ExportNpcsTrackerTooltip": "Export NPCs to RPG Sage",
         "UpdateTrackerTooltip": "Update combat tracker on Discord",
-        "Channels": {
-            "InCharacter": "IC",
-            "OutOfCharacter": "OOC",
-            "GameMaster": "GM"
-        },
-        "Discord": {
-            "IC": "Share to Discord IC",
-            "OOC": "Share to Discord OOC",
-            "GM": "Share to Discord GM"
-        },
         "BeginEncounter": "Begin Encounter",
         "EndEncounter": "End Encounter"
     },
@@ -307,12 +343,7 @@
         "FIELDS": {
             "channel": {
                 "label": "Channel",
-                "hint": "Post will be sent to this channel on Discord.",
-                "choices": {
-                    "ic": "IC",
-                    "ooc": "OOC",
-                    "gm": "GM"
-                }
+                "hint": "Post will be sent to this channel on Discord."
             },
             "content": {
                 "label": "Content",
