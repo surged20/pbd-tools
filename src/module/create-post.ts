@@ -7,6 +7,7 @@ import { isChannelTargetActive, getChannelDisplayName } from "./helpers.ts";
 import { postDiscordMessageAsPersona } from "./discord.ts";
 import { generateImageLink } from "./images.ts";
 import { CreatePostDialog } from "./create-post-dialog.ts";
+import { getUserMentionMap } from "./settings/user-mention-config.ts";
 
 type DegreeOfSuccessString =
     | "criticalFailure"
@@ -31,6 +32,10 @@ interface CreatePostData {
     saveDC: number | null;
     isBasicSave: boolean;
     spellDescription: string | null;
+    isCheck: boolean;
+    checkName: string | null;
+    checkDC: number | null;
+    actionDescription: string | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,11 +48,184 @@ const OUTCOME_LABELS: Record<DegreeOfSuccessString, string> = {
     criticalFailure: "Critical Miss",
 };
 
+const CHECK_OUTCOME_LABELS: Record<DegreeOfSuccessString, string> = {
+    criticalSuccess: "Critical Success",
+    success: "Success",
+    failure: "Failure",
+    criticalFailure: "Critical Failure",
+};
+
 function isAttackRoll(message: ChatMessagePF2e): boolean {
     return (
         !!message.isCheckRoll &&
         message.flags?.pf2e?.context?.type === "attack-roll"
     );
+}
+
+function isSkillCheck(message: ChatMessagePF2e): boolean {
+    return (
+        !!message.isCheckRoll &&
+        message.flags?.pf2e?.context?.type === "skill-check"
+    );
+}
+
+const OTHER_CHECK_TYPES = new Set(["perception-check", "flat-check"]);
+
+function isOtherCheck(message: ChatMessagePF2e): boolean {
+    return (
+        !!message.isCheckRoll &&
+        OTHER_CHECK_TYPES.has(message.flags?.pf2e?.context?.type ?? "")
+    );
+}
+
+function isActionCard(message: ChatMessagePF2e): boolean {
+    return (
+        !message.isCheckRoll &&
+        !message.isDamageRoll &&
+        !!message.flags?.pf2e?.origin
+    );
+}
+
+/** Title-case a PF2e slug: "recall-knowledge" → "Recall Knowledge" */
+function slugToTitle(slug: string): string {
+    return slug
+        .split("-")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+}
+
+/** Extract the check/skill name from message context */
+function extractCheckName(message: ChatMessagePF2e): string | null {
+    const options: string[] = message.flags?.pf2e?.context?.options ?? [];
+
+    // Look for "self:skill:athletics" or "skill:athletics" in roll options
+    for (const opt of options) {
+        const selfMatch = opt.match(/^self:skill:(.+)$/);
+        if (selfMatch) return slugToTitle(selfMatch[1]);
+        const bareMatch = opt.match(/^skill:(.+)$/);
+        if (bareMatch) return slugToTitle(bareMatch[1]);
+    }
+
+    // Try context.slug (e.g. "athletics", "perception")
+    const slug: string | undefined = message.flags?.pf2e?.context?.slug;
+    if (slug) return slugToTitle(slug);
+
+    // Fallback: derive from context type itself
+    const contextType: string | undefined = message.flags?.pf2e?.context?.type;
+    if (contextType === "perception-check") return "Perception";
+    if (contextType === "flat-check") return "Flat Check";
+
+    return null;
+}
+
+/** Extract the action name from roll options (e.g. "action:grapple" → "Grapple") */
+function extractActionName(message: ChatMessagePF2e): string | null {
+    const options: string[] = message.flags?.pf2e?.context?.options ?? [];
+    for (const opt of options) {
+        const match = opt.match(/^action:(.+)$/);
+        if (match) return slugToTitle(match[1]);
+    }
+    return null;
+}
+
+/** Resolve item from origin UUID when message.item is null */
+function resolveOriginItem(message: ChatMessagePF2e): {
+    name: string | null;
+    description: string | null;
+    actionCost: string | null;
+} {
+    const originUuid: string | undefined = message.flags?.pf2e?.origin?.uuid;
+    if (!originUuid) return { name: null, description: null, actionCost: null };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const item = fromUuidSync(originUuid) as any;
+    if (!item) return { name: null, description: null, actionCost: null };
+
+    const name: string | null = item.name ?? null;
+    const description: string | null = item.system?.description?.value ?? null;
+
+    let actionCost: string | null = null;
+    const itemActionCost = item.actionCost;
+    if (itemActionCost) {
+        if (
+            itemActionCost.type === "action" &&
+            itemActionCost.value >= 1 &&
+            itemActionCost.value <= 3
+        ) {
+            actionCost = String(itemActionCost.value);
+        } else if (
+            itemActionCost.type === "free" ||
+            itemActionCost.type === "reaction"
+        ) {
+            actionCost = itemActionCost.type;
+        }
+    }
+
+    return { name, description, actionCost };
+}
+
+/**
+ * Parse structured data from message.flavor HTML.
+ * PF2e check cards render flavor like:
+ *   <h4 class="action">Grapple <span>(Athletics Check)</span></h4>
+ *   <div ...>Target: Kyra (Fortitude DC 13)</div>
+ *   <div ...><b>Success</b> Your target is Grabbed...</div>
+ */
+function parseFlavorData(message: ChatMessagePF2e): {
+    title: string | null;
+    checkName: string | null;
+    targetName: string | null;
+    outcomeDescription: string | null;
+} {
+    const result = {
+        title: null as string | null,
+        checkName: null as string | null,
+        targetName: null as string | null,
+        outcomeDescription: null as string | null,
+    };
+
+    const flavor: string | undefined = message.flavor;
+    if (!flavor) return result;
+
+    // Extract action title from h4: "Grapple ◆ (Athletics Check)"
+    const h4Match = flavor.match(/<h4[^>]*>([\s\S]*?)<\/h4>/i);
+    if (h4Match) {
+        const h4Text = h4Match[1]
+            .replace(/<span class="pf2-icon">[^<]*<\/span>/gi, "")
+            .replace(/<[^>]+>/g, "")
+            .trim();
+        // Extract check type from parenthetical: "(Athletics Check)" → "Athletics"
+        const checkMatch = h4Text.match(/\((.+?)\s+[Cc]heck\)/);
+        if (checkMatch) {
+            result.checkName = checkMatch[1].trim();
+        }
+        // Title is everything before the parenthetical
+        const titlePart = h4Text.replace(/\(.*?\)/, "").trim();
+        if (titlePart) result.title = titlePart;
+    }
+
+    // Extract target name from "Target: Name" or "Target: Name (DC info)"
+    const targetMatch = flavor.match(/[Tt]arget:\s*(?:<[^>]*>)*\s*([^(<\n]+)/);
+    if (targetMatch) {
+        result.targetName = targetMatch[1].trim();
+    }
+
+    // Extract degree-of-success description block
+    // PF2e renders these as sections with the degree label followed by description
+    const degreePattern =
+        /(?:<strong>|<b>)\s*(Critical Success|Success|Failure|Critical Failure)\s*(?:<\/strong>|<\/b>)\s*([\s\S]*?)(?=(?:<strong>|<b>)\s*(?:Critical |)(?:Success|Failure)|$)/i;
+    const degreeMatch = flavor.match(degreePattern);
+    if (degreeMatch) {
+        const degreeText = degreeMatch[2]
+            .replace(/<[^>]+>/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+        if (degreeText) {
+            result.outcomeDescription = `**${degreeMatch[1]}** ${degreeText}`;
+        }
+    }
+
+    return result;
 }
 
 function extractTraits(message: ChatMessagePF2e): string[] {
@@ -76,10 +254,15 @@ function extractCreatePostData(
 ): CreatePostData | null {
     const isDamage = !!message.isDamageRoll;
     const isAttack = isAttackRoll(message);
-    if (!isDamage && !isAttack) return null;
+    const isSkill = isSkillCheck(message);
+    const isOther = isOtherCheck(message);
+    const isAction = isActionCard(message);
+    if (!isDamage && !isAttack && !isSkill && !isOther && !isAction)
+        return null;
 
     const roll = message.rolls?.[0];
-    if (!roll) return null;
+    // Non-rolling action cards don't need a roll
+    if (!roll && !isAction) return null;
 
     const actorName: string = message.actor?.name ?? "Unknown";
     const tokenName: string =
@@ -90,14 +273,20 @@ function extractCreatePostData(
         "";
     let targetName: string | null = message.target?.actor?.name ?? null;
     if (!targetName) {
-        // Fallback: resolve target from damage context flags (UUID-based)
+        // Fallback: resolve target from context flags (UUID-based)
         const targetFlag = message.flags?.pf2e?.context?.target;
         if (targetFlag?.actor) {
             const resolved = fromUuidSync(targetFlag.actor);
             targetName = resolved?.name ?? null;
         }
+        // Try token UUID as fallback (skill checks may only have token ref)
+        if (!targetName && targetFlag?.token) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const resolved = fromUuidSync(targetFlag.token) as any;
+            targetName = resolved?.name ?? resolved?.actor?.name ?? null;
+        }
     }
-    const itemName: string | null = message.item?.name ?? null;
+    let itemName: string | null = message.item?.name ?? null;
 
     // Determine action cost from the item
     let actionCost: string | null = null;
@@ -142,16 +331,118 @@ function extractCreatePostData(
         ? (message.item?.system?.description?.value ?? null)
         : null;
 
+    const degreeStrings: DegreeOfSuccessString[] = [
+        "criticalFailure",
+        "failure",
+        "success",
+        "criticalSuccess",
+    ];
+
+    // Skill check or other check (perception, flat)
+    if (isSkill || isOther) {
+        const total: number = roll.total;
+        const degree: number | undefined = roll.degreeOfSuccess;
+        const outcome =
+            degree !== undefined && degree >= 0 && degree <= 3
+                ? CHECK_OUTCOME_LABELS[degreeStrings[degree]]
+                : null;
+        let checkName = extractCheckName(message);
+
+        // Fill in item name from action options or origin UUID if not on message
+        if (!itemName) {
+            itemName = extractActionName(message);
+        }
+        let actionDescription: string | null = null;
+        if (!itemName || !actionCost) {
+            const origin = resolveOriginItem(message);
+            if (!itemName && origin.name) itemName = origin.name;
+            if (!actionCost && origin.actionCost)
+                actionCost = origin.actionCost;
+            actionDescription = origin.description;
+        }
+
+        // Parse flavor HTML for missing fields (most reliable source)
+        const flavorData = parseFlavorData(message);
+        if (!checkName && flavorData.checkName) {
+            checkName = flavorData.checkName;
+        }
+        if (!targetName && flavorData.targetName) {
+            targetName = flavorData.targetName;
+        }
+        if (!itemName && flavorData.title) {
+            itemName = flavorData.title;
+        }
+        // Use the degree-specific outcome description from the card
+        if (flavorData.outcomeDescription) {
+            actionDescription = flavorData.outcomeDescription;
+        }
+
+        return {
+            actorName,
+            targetName,
+            itemName,
+            attackTotal: total,
+            attackOutcome: outcome,
+            damageTotal: null,
+            damageBreakdown: null,
+            tokenName,
+            tokenImagePath,
+            actionCost,
+            traits,
+            isSpell,
+            saveType,
+            saveDC: null,
+            isBasicSave,
+            spellDescription,
+            isCheck: true,
+            checkName,
+            checkDC: null, // Don't expose target DC to players
+            actionDescription,
+        };
+    }
+
+    // Non-rolling action card
+    if (isAction) {
+        let actionDescription: string | null =
+            message.item?.system?.description?.value ?? null;
+
+        // Fill in from origin UUID if message.item is missing
+        if (!itemName || !actionDescription) {
+            const origin = resolveOriginItem(message);
+            if (!itemName && origin.name) itemName = origin.name;
+            if (!actionCost && origin.actionCost)
+                actionCost = origin.actionCost;
+            if (!actionDescription) actionDescription = origin.description;
+        }
+
+        return {
+            actorName,
+            targetName,
+            itemName,
+            attackTotal: null,
+            attackOutcome: null,
+            damageTotal: null,
+            damageBreakdown: null,
+            tokenName,
+            tokenImagePath,
+            actionCost,
+            traits,
+            isSpell,
+            saveType,
+            saveDC: null,
+            isBasicSave,
+            spellDescription,
+            isCheck: false,
+            checkName: null,
+            checkDC: null,
+            actionDescription,
+        };
+    }
+
     // Attack roll: extract attack total and outcome directly from the roll
     if (isAttack) {
         const total: number = roll.total;
         const degree: number | undefined = roll.degreeOfSuccess;
-        const degreeStrings: DegreeOfSuccessString[] = [
-            "criticalFailure",
-            "failure",
-            "success",
-            "criticalSuccess",
-        ];
         const outcome =
             degree !== undefined && degree >= 0 && degree <= 3
                 ? OUTCOME_LABELS[degreeStrings[degree]]
@@ -174,6 +465,10 @@ function extractCreatePostData(
             saveDC: null,
             isBasicSave,
             spellDescription,
+            isCheck: false,
+            checkName: null,
+            checkDC: null,
+            actionDescription: null,
         };
     }
 
@@ -206,12 +501,6 @@ function extractCreatePostData(
     // Outcome may be on the roll options or in the damageRoll flag
     const degreeOfSuccess: number | undefined =
         roll.options?.degreeOfSuccess ?? undefined;
-    const degreeStrings: DegreeOfSuccessString[] = [
-        "criticalFailure",
-        "failure",
-        "success",
-        "criticalSuccess",
-    ];
     const attackOutcome =
         degreeOfSuccess !== undefined &&
         degreeOfSuccess >= 0 &&
@@ -236,6 +525,10 @@ function extractCreatePostData(
         saveDC: null, // filled by findSaveDC
         isBasicSave,
         spellDescription,
+        isCheck: false,
+        checkName: null,
+        checkDC: null,
+        actionDescription: null,
     };
 }
 
@@ -348,9 +641,17 @@ function getActionEmoji(actionCost: string | null): string {
 function buildMechanicalLines(data: CreatePostData): string[] {
     const lines: string[] = [];
 
+    if (data.traits.length > 0) {
+        lines.push(`-# ${data.traits.map((t) => t.toUpperCase()).join(" ")}`);
+    }
+
     if (data.attackTotal !== null) {
         const outcomeStr = data.attackOutcome ? ` (${data.attackOutcome})` : "";
-        lines.push(`**Attack:** ${data.attackTotal}${outcomeStr}`);
+        if (data.isCheck) {
+            lines.push(`**Result:** ${data.attackTotal}${outcomeStr}`);
+        } else {
+            lines.push(`**Attack:** ${data.attackTotal}${outcomeStr}`);
+        }
     }
 
     if (data.saveType) {
@@ -369,12 +670,12 @@ function buildMechanicalLines(data: CreatePostData): string[] {
         lines.push(`**Damage:** ${data.damageTotal}${breakdownStr}`);
     }
 
-    if (data.traits.length > 0) {
-        lines.push(`**Traits:** ${data.traits.join(", ")}`);
-    }
-
     if (data.spellDescription) {
         lines.push(data.spellDescription);
+    }
+
+    if (data.actionDescription) {
+        lines.push(data.actionDescription);
     }
 
     return lines;
@@ -393,23 +694,38 @@ function generatePostTemplate(
     const target = data.targetName ? `**${data.targetName}**` : null;
     const item = data.itemName ? `**${data.itemName}**` : null;
 
+    const checkLabel = data.checkName ? `${data.checkName} check` : null;
+
     let headline: string;
     if (data.isSpell) {
         if (target && item) {
-            headline = `${actor} ${prefix}casts ${item} on ${target}!`;
+            headline = `${actor} ${prefix}casts ${item} on ${target}`;
         } else if (item) {
-            headline = `${actor} ${prefix}casts ${item}!`;
+            headline = `${actor} ${prefix}casts ${item}`;
         } else {
-            headline = `${actor} ${prefix}casts a spell!`;
+            headline = `${actor} ${prefix}casts a spell`;
+        }
+    } else if (data.isCheck) {
+        // Skill / perception / flat checks
+        if (target && item && checkLabel) {
+            headline = `${prefix}${actor} uses ${item} (${checkLabel}) against ${target}`;
+        } else if (item && checkLabel) {
+            headline = `${prefix}${actor} uses ${item} (${checkLabel})`;
+        } else if (checkLabel) {
+            headline = `${prefix}${actor} rolls ${checkLabel}`;
+        } else if (item) {
+            headline = `${prefix}${actor} uses ${item}`;
+        } else {
+            headline = `${prefix}${actor} rolls a check`;
         }
     } else if (target && item) {
-        headline = `${prefix}${actor} attacks ${target} with ${item}!`;
+        headline = `${prefix}${actor} attacks ${target} with ${item}`;
     } else if (target) {
-        headline = `${prefix}${actor} attacks ${target}!`;
+        headline = `${prefix}${actor} attacks ${target}`;
     } else if (item) {
-        headline = `${prefix}${actor} uses ${item}!`;
+        headline = `${prefix}${actor} uses ${item}`;
     } else {
-        headline = `${prefix}${actor} deals damage!`;
+        headline = `${prefix}${actor} deals damage`;
     }
 
     const mechanicalLines = buildMechanicalLines(data);
@@ -427,6 +743,55 @@ function generatePostTemplate(
     return { content, embeds: [] };
 }
 
+/**
+ * Replace @Name patterns in text with "ActorName (<@USER_ID>)" mentions
+ * using the user-mention-config setting (actorId → UserMentionEntry).
+ * Matches both full actor names and aliases (if set).
+ * Output format matches RPGSage: "Kyra (Level 1) (<@123456>)"
+ */
+function resolveUserMentions(text: string): string {
+    const userMap = getUserMentionMap();
+
+    // Build reverse lookup: lowercased name → { discordUserId, actorName }
+    // Register both the full actor name and the alias (if set)
+    const nameLookup = new Map<
+        string,
+        { discordUserId: string; actorName: string }
+    >();
+    for (const [actorId, entry] of userMap) {
+        const actor = game.actors.get(actorId);
+        const actorName = actor?.name ?? "";
+        if (actorName) {
+            nameLookup.set(actorName.toLowerCase(), {
+                discordUserId: entry.discordUserId,
+                actorName,
+            });
+        }
+        if (entry.alias) {
+            nameLookup.set(entry.alias.toLowerCase(), {
+                discordUserId: entry.discordUserId,
+                actorName,
+            });
+        }
+    }
+
+    if (nameLookup.size === 0) return text;
+
+    // Build a regex that matches @Name for each known name (longest first
+    // so "Kyra (Level 1)" is tried before "Kyra").
+    const escaped = [...nameLookup.keys()]
+        .sort((a, b) => b.length - a.length)
+        .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const pattern = new RegExp(`@(${escaped.join("|")})`, "gi");
+
+    return text.replace(pattern, (_match, name: string) => {
+        const entry = nameLookup.get(name.toLowerCase());
+        return entry
+            ? `${entry.actorName} (<@${entry.discordUserId}>)`
+            : _match;
+    });
+}
+
 export async function showCreatePostDialog(
     message: ChatMessagePF2e,
 ): Promise<void> {
@@ -441,12 +806,12 @@ export async function showCreatePostDialog(
 
     const data = extractCreatePostData(message);
     if (!data) {
-        ui.notifications.warn("Could not extract roll data from this message.");
+        ui.notifications.warn("Could not extract data from this message.");
         return;
     }
 
     // For damage rolls, try to find the associated attack roll
-    if (!isAttackRoll(message)) {
+    if (message.isDamageRoll && !isAttackRoll(message)) {
         const attackRoll = findAttackRoll(message);
         if (attackRoll) {
             data.attackTotal = attackRoll.total;
@@ -488,6 +853,20 @@ export async function showCreatePostDialog(
             .join("\n");
     }
 
+    // Convert action description HTML to Discord markdown
+    if (data.actionDescription) {
+        const { convertToMarkdownAsync } = await import("./helpers.ts");
+        let desc = await convertToMarkdownAsync(data.actionDescription);
+        desc = desc
+            .replace(/^[\s*-]{3,}$/gm, "")
+            .replace(/\n{2,}/g, "\n")
+            .trim();
+        data.actionDescription = desc
+            .split("\n")
+            .map((line) => (line.trim() === "" ? "" : `-# ${line}`))
+            .join("\n");
+    }
+
     const style =
         (game.settings.get(MODULE_NAME, "action-post-style") as string) ===
         "embed"
@@ -510,12 +889,21 @@ export async function showCreatePostDialog(
             embedPreview,
         });
 
+        // Resolve @Name mentions to Discord <@ID> for the Discord post
+        const discordContent = resolveUserMentions(result.content);
+        const discordEmbeds = result.embeds.map((e) => ({
+            ...e,
+            description: e.description
+                ? resolveUserMentions(e.description)
+                : e.description,
+        }));
+
         // Post with token persona
         const avatarUrl = await generateImageLink(data.tokenImagePath);
         await postDiscordMessageAsPersona(
             channel,
-            result.content,
-            result.embeds,
+            discordContent,
+            discordEmbeds,
             data.tokenName,
             avatarUrl,
         );
@@ -524,7 +912,7 @@ export async function showCreatePostDialog(
             game.i18n.localize(`${MODULE_NAME}.CreatePost.Posted`),
         );
 
-        // Mirror to Foundry chat as a GM-whispered message
+        // Mirror to Foundry chat as a GM-whispered message (original @Name text)
         const mirrorHtml = discordMarkdownToHtml(result.content);
         const embedHtml = result.embeds
             .map((e) =>

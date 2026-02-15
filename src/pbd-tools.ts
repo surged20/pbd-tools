@@ -392,6 +392,69 @@ Hooks.on(
     },
 );
 
+// Chat log context menu — Create Post from damage rolls
+Hooks.on(
+    "getChatMessageContextOptions",
+    (_html: HTMLElement, entryOptions: ContextMenuEntry[]) => {
+        if (!game.user.isGM) return;
+        entryOptions.push({
+            name: `${MODULE_NAME}.CreatePost.MenuLabel`,
+            icon: '<i class="fa-brands fa-discord"></i>',
+            callback: async (li: HTMLElement) => {
+                const messageId = li.dataset.messageId;
+                if (!messageId) return;
+                const message = game.messages.get(messageId);
+                if (!message) return;
+                const { showCreatePostDialog } = await import(
+                    "./module/create-post.ts"
+                );
+                await showCreatePostDialog(message);
+            },
+            condition: (li: HTMLElement) => {
+                const channel = game.settings.get(
+                    MODULE_NAME,
+                    "action-post-channel",
+                ) as ChannelTargetId;
+                if (!isChannelTargetActive(channel)) return false;
+                const messageId = li.dataset.messageId;
+                if (!messageId) return false;
+                const message = game.messages.get(messageId);
+                if (!message) return false;
+
+                const msg = message as unknown as {
+                    isDamageRoll?: boolean;
+                    isCheckRoll?: boolean;
+                    flags?: {
+                        pf2e?: {
+                            context?: { type?: string };
+                            origin?: unknown;
+                        };
+                    };
+                };
+                const isDamage = !!msg.isDamageRoll;
+                const contextType = msg.flags?.pf2e?.context?.type;
+                const isCheck = !!msg.isCheckRoll;
+                const isAttack = isCheck && contextType === "attack-roll";
+                const isSkillCheck = isCheck && contextType === "skill-check";
+                const isOtherCheck =
+                    isCheck &&
+                    (contextType === "perception-check" ||
+                        contextType === "flat-check");
+                // Non-rolling action card: has pf2e origin but no roll
+                const isActionCard =
+                    !isCheck && !isDamage && !!msg.flags?.pf2e?.origin;
+                return (
+                    isDamage ||
+                    isAttack ||
+                    isSkillCheck ||
+                    isOtherCheck ||
+                    isActionCard
+                );
+            },
+        });
+    },
+);
+
 // NPC/Actor sheet header button handler
 Hooks.on(
     "getActorSheetHeaderButtons",

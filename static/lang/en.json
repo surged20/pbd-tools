@@ -318,7 +318,17 @@
             "TrackerAcDisplayValue": "Value",
             "TrackerHpDisplayNone": "None",
             "TrackerHpDisplayPc": "PC HP",
-            "TrackerHpDisplayPcFoe": "PC HP / opposition damage taken"
+            "TrackerHpDisplayPcFoe": "PC HP / opposition damage taken",
+            "ActionPostChannel": {
+                "Name": "Action Post Channel",
+                "Hint": "Discord channel that receives action posts from damage roll context menus"
+            },
+            "ActionPostStyle": {
+                "Name": "Action Post Style",
+                "Hint": "Text puts everything in the message. Embed separates mechanical details into a Discord embed."
+            },
+            "ActionPostStyleText": "Text",
+            "ActionPostStyleEmbed": "Embed"
         },
         "UserMentionConfig": {
             "Title": "Player Character to Discord User ID Mentions",
@@ -332,7 +342,15 @@
         "ExportNpcsTrackerTooltip": "Export NPCs to RPG Sage",
         "UpdateTrackerTooltip": "Update combat tracker on Discord",
         "BeginEncounter": "Begin Encounter",
-        "EndEncounter": "End Encounter"
+        "EndEncounter": "End Encounter",
+        "CreatePost": {
+            "MenuLabel": "Create Post",
+            "DialogTitle": "Create Discord Post",
+            "PostingTo": "Posting to:",
+            "Posted": "Post sent to Discord",
+            "MirrorSpeaker": "Discord Post",
+            "EmbedPreviewLabel": "Embed (auto-generated)"
+        }
     },
     "TYPES.RegionBehavior": {
         "pbd-tools": {

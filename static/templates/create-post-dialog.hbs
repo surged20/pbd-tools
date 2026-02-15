@@ -1,0 +1,10 @@
+<form class="pbd-create-post-form">
+<div class="pbd-create-post-content">
+<p class="pbd-create-post-channel">{{localize 'pbd-tools.CreatePost.PostingTo'}} <strong>{{channelName}}</strong></p>
+<textarea name="post-content" class="pbd-create-post-textarea" rows="12">{{content}}</textarea>
+{{#if embedPreview}}
+<p class="pbd-create-post-embed-label">{{localize 'pbd-tools.CreatePost.EmbedPreviewLabel'}}</p>
+<div class="pbd-create-post-embed-preview">{{{embedPreview}}}</div>
+{{/if}}
+</div>
+</form>

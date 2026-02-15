@@ -47,6 +47,31 @@ export class ExportSettings extends SettingsMenuPbdTools {
                 choices: activeChannels,
                 default: Object.keys(activeChannels)[0] ?? "",
             },
+            "action-post-channel": {
+                name: `${MODULE_NAME}.Setting.ActionPostChannel.Name`,
+                hint: `${MODULE_NAME}.Setting.ActionPostChannel.Hint`,
+                scope: "world",
+                config: true,
+                type: String,
+                choices: activeChannels,
+                default: Object.keys(activeChannels)[0] ?? "",
+            },
+            "action-post-style": {
+                name: `${MODULE_NAME}.Setting.ActionPostStyle.Name`,
+                hint: `${MODULE_NAME}.Setting.ActionPostStyle.Hint`,
+                scope: "world",
+                config: true,
+                type: String,
+                choices: {
+                    text: game.i18n.localize(
+                        `${MODULE_NAME}.Setting.ActionPostStyleText`,
+                    ),
+                    embed: game.i18n.localize(
+                        `${MODULE_NAME}.Setting.ActionPostStyleEmbed`,
+                    ),
+                },
+                default: "text",
+            },
             "npc-export-server": {
                 name: `${MODULE_NAME}.Setting.NpcExportServer.Name`,
                 hint: `${MODULE_NAME}.Setting.NpcExportServer.Hint`,
