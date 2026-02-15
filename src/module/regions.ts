@@ -4,8 +4,8 @@ import type * as fields from "foundry-pf2e/foundry/common/data/fields.d.mts";
 // DataSchema type for defineSchema return value
 type DataSchema = Record<string, fields.DataField>;
 import { postDiscord } from "./discord.ts";
-import { getActiveChannelTargets } from "./helpers.ts";
-import type { ChannelTargetId } from "./constants.ts";
+import { isChannelTargetActive } from "./helpers.ts";
+import { MODULE_NAME, type ChannelTargetId } from "./constants.ts";
 import type { RegionEvent } from "foundry-pf2e/foundry/client/documents/region.mjs";
 
 // Runtime globals
@@ -51,8 +51,7 @@ class PostDiscordRegionBehaviorType extends foundry.data.regionBehaviors
             channel: new fields.StringField({
                 required: true,
                 nullable: false,
-                initial: Object.keys(getActiveChannelTargets())[0] ?? "",
-                choices: getActiveChannelTargets() as Record<string, string>,
+                initial: "",
             }),
             content: new fields.StringField({ required: true }),
             once: new fields.BooleanField({ initial: true }),
@@ -72,6 +71,14 @@ class PostDiscordRegionBehaviorType extends foundry.data.regionBehaviors
         // Remainder only run by active GM
         if (!game.users.activeGM?.isSelf) return;
 
+        const channel = this.channel as ChannelTargetId;
+        if (!isChannelTargetActive(channel)) {
+            ui.notifications.warn(
+                `[${MODULE_NAME}] Region behavior channel "${channel}" is not configured.`,
+            );
+            return;
+        }
+
         if (this.once) {
             this.parent?.update({ disabled: true });
         }
@@ -80,7 +87,7 @@ class PostDiscordRegionBehaviorType extends foundry.data.regionBehaviors
             game.togglePause(true, true);
         }
 
-        postDiscord(this.channel as ChannelTargetId, this.content as string);
+        postDiscord(channel, this.content as string);
     }
 }
 
