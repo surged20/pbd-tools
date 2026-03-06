@@ -268,7 +268,7 @@ async function createSageNpc(
     record["avatar"] = await generateImageLink(actor.img);
     record["color"] = "";
     const tokenSrc = actor.prototypeToken.texture.src ?? "";
-    record["tokenImage"] = tokenSrc
+    record["token"] = tokenSrc
         ? await generateImageLink(tokenSrc)
         : record["avatar"];
 
