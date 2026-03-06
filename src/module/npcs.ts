@@ -91,6 +91,9 @@ function getSaves(
     record["fort"] = spoilers(actor.system.saves.fortitude.value);
     record["ref"] = spoilers(actor.system.saves.reflex.value);
     record["will"] = spoilers(actor.system.saves.will.value);
+    record["dc.fort"] = spoilers(10 + actor.system.saves.fortitude.value);
+    record["dc.ref"] = spoilers(10 + actor.system.saves.reflex.value);
+    record["dc.will"] = spoilers(10 + actor.system.saves.will.value);
 
     return record;
 }
