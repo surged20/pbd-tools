@@ -331,13 +331,22 @@
             "ActionPostStyleEmbed": "Embed"
         },
         "UserMentionConfig": {
-            "Title": "Player Character to Discord User ID Mentions",
-            "Description": "Select a PC and associate it with a Discord User ID.",
-            "DescriptionUserID": "The Discord User ID may be obtained by <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5CRSRTWYCGPHZQ37H\">enabling developer mode</a> and then <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5H5D7JBY2QKKPVKNA\">copying the User ID</a>",
+            "Title": "Player Character to Discord User Mentions",
+            "Description": "Map PCs to Discord users for @mentions. Use the bot lookup to select members from your server, or enter a Discord User ID manually. Add an alias (e.g. \"Durg\") to match short @mentions in posts.",
+            "DescriptionUserID": "Manual Discord User ID may be obtained by <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5CRSRTWYCGPHZQ37H\">enabling developer mode</a> and then <a href=\"https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID#h_01HRSTXPS5H5D7JBY2QKKPVKNA\">copying the User ID</a>.",
             "PCLabel": "Player Character",
             "SelectPC": "Select a PC",
-            "UserIDLabel": "Discord User ID",
-            "AddMapping": "Add PC to User ID Notification"
+            "DiscordUserLabel": "Discord User",
+            "SelectDiscordUser": "-- Select a Discord user --",
+            "FetchUsers": "Fetch Members",
+            "UserIDLabel": "Discord User ID (manual)",
+            "UserIDPlaceholder": "e.g. 123456789012345678",
+            "AliasLabel": "Alias",
+            "AliasPlaceholder": "e.g. Durg",
+            "AddMapping": "Add PC to User Mention",
+            "NoBotConfigured": "Bot is not configured. Set up the bot in Game Channels first.",
+            "FetchedMembers": "Fetched {count} Discord member(s).",
+            "FetchFailed": "Failed to fetch Discord members. Check bot token and proxy."
         },
         "ExportNpcsTrackerTooltip": "Export NPCs to RPG Sage",
         "UpdateTrackerTooltip": "Update combat tracker on Discord",

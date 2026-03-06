@@ -7,7 +7,7 @@
 </div>
 <form style="flex:none">
     <div class="form-group">
-        <label style="text-align: center;" for="sceneId">{{localize 'pbd-tools.UserMentionConfig.PCLabel'}}</label>
+        <label style="text-align: center;" for="actorId">{{localize 'pbd-tools.UserMentionConfig.PCLabel'}}</label>
         <select name="actorId" id="actorId">
             <option value="" disabled selected>{{localize 'pbd-tools.UserMentionConfig.SelectPC'}}</option>
             {{#each pcs}}
@@ -15,9 +15,27 @@
             {{/each}}
         </select>
     </div>
+    {{#if botConfigured}}
+    <div class="form-group">
+        <label style="text-align: center;" for="discordUserSelect">{{localize 'pbd-tools.UserMentionConfig.DiscordUserLabel'}}</label>
+        <div style="display: flex; gap: 4px;">
+            <select name="discordUserSelect" id="discordUserSelect" style="flex: 1;">
+                <option value="">{{localize 'pbd-tools.UserMentionConfig.SelectDiscordUser'}}</option>
+                <!-- Options populated by _renderInner -->
+            </select>
+            <button type="button" class="fetch-discord-users" style="flex: 0 0 auto; white-space: nowrap;">
+                <i class="fas fa-sync"></i> {{localize 'pbd-tools.UserMentionConfig.FetchUsers'}}
+            </button>
+        </div>
+    </div>
+    {{/if}}
     <div class="form-group">
         <label style="text-align: center;" for="userId">{{localize 'pbd-tools.UserMentionConfig.UserIDLabel'}}</label>
-        <input type="text" name="userId" id="userId">
+        <input type="text" name="userId" id="userId" placeholder="{{localize 'pbd-tools.UserMentionConfig.UserIDPlaceholder'}}">
+    </div>
+    <div class="form-group">
+        <label style="text-align: center;" for="alias">{{localize 'pbd-tools.UserMentionConfig.AliasLabel'}}</label>
+        <input type="text" name="alias" id="alias" placeholder="{{localize 'pbd-tools.UserMentionConfig.AliasPlaceholder'}}">
     </div>
     <div style="display:flex; justify-content: center; align-items: center" class="add-pc">
         <button style="width: 50%" class="btn btn-primary">{{localize 'pbd-tools.UserMentionConfig.AddMapping'}}</button>
@@ -28,7 +46,8 @@
         <thead>
             <tr>
                 <th>{{localize 'pbd-tools.UserMentionConfig.PCLabel'}}</th>
-                <th>{{localize 'pbd-tools.UserMentionConfig.UserIDLabel'}}</th>
+                <th>{{localize 'pbd-tools.UserMentionConfig.DiscordUserLabel'}}</th>
+                <th>{{localize 'pbd-tools.UserMentionConfig.AliasLabel'}}</th>
                 <th> </th>
             </tr>
         </thead>

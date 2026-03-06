@@ -17,6 +17,7 @@ import {
     isComplexHazardOrNpc,
 } from "./helpers.ts";
 import { getActorAlias } from "./npcs.ts";
+import { getUserMentionMap } from "./settings/user-mention-config.ts";
 
 type InitTableData = Record<string, string | number | null>;
 
@@ -34,22 +35,17 @@ function makeTitle(slug) {
 function getUserMentions(mentions: string[]): string {
     if (!game.settings.get(MODULE_NAME, "tracker-user-mention")) return "";
 
-    const userMap = new Map<string, string>(
-        game.settings.get(MODULE_NAME, "user-mention-config") as Map<
-            string,
-            string
-        >,
-    );
+    const userMap = getUserMentionMap();
 
     let mentionContent = "";
     mentions.forEach((actorId: string) => {
-        if (userMap.has(actorId)) {
-            mentionContent +=
-                " <@" +
-                userMap.get(actorId) +
-                "> (" +
-                game.actors.get(actorId)?.name.split(/ (.*)/)[0] +
-                ")";
+        const entry = userMap.get(actorId);
+        if (entry) {
+            const displayName =
+                entry.alias ??
+                game.actors.get(actorId)?.name.split(/ (.*)/)[0] ??
+                "";
+            mentionContent += ` <@${entry.discordUserId}> (${displayName})`;
         }
     });
 
