@@ -23,7 +23,7 @@ export async function generateImageLink(
     } else {
         if (isRemoteAccessible()) {
             const convertedURI = convertToValidURI(imageSource);
-            imageUrl = `${getRemoteURL()}/${convertedURI}`;
+            imageUrl = `${getRemoteURL().replace(/\/+$/, "")}/${convertedURI}`;
         } else {
             return "";
         }
